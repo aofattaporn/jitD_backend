@@ -1,4 +1,4 @@
-module simpleservice
+module jitD
 
 go 1.19
 
