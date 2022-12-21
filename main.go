@@ -2,6 +2,7 @@ package main
 
 import (
 	// "fmt"
+	// "context"
 	"github.com/gin-gonic/gin"
 
 	// configs "jitD/configs"
@@ -12,18 +13,21 @@ import (
 
 func main() {
 
-	// initail route 
+	// initail route
 	router := gin.Default()
-	
-	// use middleware 
-	router.Use(gin.Logger())
+
+	// use middleware
+	// router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
-	// provide route 
-	routes.PostRoutes(router)
+	// provide route
+	routes.UserRoute(router)
 
+	router.GET("/a", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusOK, "message: status Ok")
+	})
 
-	// configue on port 3000 
+	// configue on port 3000
 	s := &http.Server{
 		Addr:           ":3000",
 		Handler:        router,

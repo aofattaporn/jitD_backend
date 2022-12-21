@@ -14,21 +14,29 @@ import (
 
 )
 
-func CreateClient(ctx context.Context) *firestore.Client {
+func ConnectFireStore(ctx context.Context) firebase.App{
 
 	opt := option.WithCredentialsFile("./jitd-application-firebase-adminsdk-ee9le-ebfdb5c4c5.json")
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
-		fmt.Errorf("error initializing app: %v", err)
+		return *app
+	} else{
+		fmt.Print("Connection success", app)
+		return *app
 	}
+}
 
+func CreateClient(ctx context.Context) *firestore.Client{
 
-	// Sets your Google Cloud Platform project ID.
-	// projectID := "jitd-application"
+	opt := option.WithCredentialsFile("./jitd-application-firebase-adminsdk-ee9le-ebfdb5c4c5.json")
+	app, err := firebase.NewApp(context.Background(), nil, opt)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	} 
 
 	client, err := app.Firestore(ctx) 
 	if err != nil {
-			  log.Fatalf("Failed to create client: %v", err)
+		log.Fatalf("Failed to create client: %v", err)
 	}
 	// Close client when done with
 	// defer client.Close()
