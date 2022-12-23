@@ -7,8 +7,8 @@ import (
 
 	// configs "jitD/configs"
 	routes "jitD/routers"
-	"net/http"
-	"time"
+	// "net/http"
+	// "time"
 )
 
 func main() {
@@ -23,17 +23,6 @@ func main() {
 	// provide route
 	routes.UserRoute(router)
 
-	router.GET("/a", func(ctx *gin.Context) {
-		ctx.JSON(http.StatusOK, "message: status Ok")
-	})
-
 	// configue on port 3000
-	s := &http.Server{
-		Addr:           ":3000",
-		Handler:        router,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
-	}
-	s.ListenAndServe()
+	router.Run("localhost:3000")
 }

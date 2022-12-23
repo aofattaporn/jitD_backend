@@ -40,14 +40,77 @@ func GetAllUser(c *gin.Context) {
 	c.JSON(http.StatusOK, users)
 }
 
-func GetUserID(c *gin.Context) {
+func GetUserById(c *gin.Context) {
+
+	id := c.Param("id")
+	user := models.User{}
+
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
-	user := client.Collection("user").Documents(ctx)
+	dsnap, err := client.Collection("User").Doc(id).Get(ctx)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "cant create",
+		})
+	}
 
-	fmt.Println(user.GetAll())
-
-	// return data
+	m := dsnap.Data()
+	mapstructure.Decode(dsnap.Data(), &user)
+	fmt.Printf("Document data: %#v\n", m)
 	c.JSON(http.StatusOK, user)
+
+}
+
+func CreateUser(c *gin.Context) {
+
+	// create client
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
+	// seection create data
+	_, _, err := client.Collection("User").Add(ctx, map[string]interface{}{
+		"email":    "user123@hotmail.com",
+		"password": "1111111111",
+		"userName": "attaporrn1234",
+	})
+
+	// check nil value
+	if err != nil {
+		log.Fatalf("Failed adding alovelace: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "cant create",
+		})
+	} else {
+		c.JSON(http.StatusCreated, gin.H{
+			"message": "create data success",
+		})
+	}
+}
+
+func DeleteUser(c *gin.Context) {
+
+	// users := []models.User{}
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
+	iter := client.Collection("User").Documents(ctx)
+	for {
+		// user := models.User{}
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+			c.JSON(http.StatusNotFound, "Not found")
+		}
+		doc.Ref.Delete(ctx)
+		// mapstructure.Decode(doc.Data(), &user)
+		// users = append(users, user)
+	}
+
+	c.JSON(http.StatusAccepted, gin.H{
+		"message": "delete data success",
+	})
 }
