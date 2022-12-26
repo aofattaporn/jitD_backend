@@ -22,6 +22,7 @@ func main() {
 
 	// provide route
 	routes.UserRoute(router)
+	routes.BookRoutes(router)
 
 	// configue on port 3000
 	router.Run("localhost:3000")
