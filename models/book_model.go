@@ -1,7 +1,9 @@
 package models
 
+
 type Book struct {
 	Auther     string `json:"auther"`
 	Name       string `json:"name"`
-	Characters []string 
+	Character  []string `json:"character"`
+	Seller	[]string `json:seller,omitempty"`
 }

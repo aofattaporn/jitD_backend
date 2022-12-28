@@ -28,6 +28,7 @@ func ConnectFireStore(ctx context.Context) firebase.App{
 
 func CreateClient(ctx context.Context) *firestore.Client{
 
+
 	opt := option.WithCredentialsFile("./jitd-application-firebase-adminsdk-ee9le-ebfdb5c4c5.json")
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
