@@ -1,28 +1,26 @@
 package controllers
 
 import (
+	"cloud.google.com/go/firestore"
 	"context"
-	"fmt"
+	"github.com/gin-gonic/gin"
+	mapstructure "github.com/mitchellh/mapstructure"
+	"google.golang.org/api/iterator"
 	configs "jitD/configs"
 	models "jitD/models"
 	"log"
-
-	mapstructure "github.com/mitchellh/mapstructure"
-
 	"net/http"
-
-	"google.golang.org/api/iterator"
-
-	"github.com/gin-gonic/gin"
 )
 
 // Retrive all book
 func GetAllBook(c *gin.Context) {
 
+	// create client
 	books := []models.Book{}
 	ctx := context.Background()
 	client := configs.CreateClient(c)
 
+	//get all books
 	iter := client.Collection("Book").Documents(ctx)
 	for {
 		book := models.Book{}
@@ -39,20 +37,20 @@ func GetAllBook(c *gin.Context) {
 		books = append(books, book)
 	}
 
-	fmt.Println(books)
+	// return data
 	c.JSON(http.StatusOK, books)
-
-	return
 }
 
 // Retrive book by id
 func GetBookById(c *gin.Context) {
 
+	// create client and set variable
 	id := c.Param("id")
 	book := models.Book{}
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
+	//get all books
 	dsnap, err := client.Collection("Book").Doc(id).Get(ctx)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -60,6 +58,7 @@ func GetBookById(c *gin.Context) {
 		})
 	}
 
+	// mapping and return data
 	mapstructure.Decode(dsnap.Data(), &book)
 	c.JSON(http.StatusOK, book)
 }
@@ -67,15 +66,12 @@ func GetBookById(c *gin.Context) {
 // get seller by id
 func GetSellerById(c *gin.Context) {
 
-	// id := c.Param("id")
-	// book := models.Book{}
-	seller_x := []models.Seller{}
-	xxx := models.Seller{}
+	id := c.Param("id")
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 	defer client.Close()
 
-	doc, err := client.Collection("Book").Doc("lmW8BLciqMyUMLglxAZ9").Get(ctx)
+	doc, err := client.Collection("Book").Doc(id).Get(ctx)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": "Not found 1",
@@ -86,38 +82,27 @@ func GetSellerById(c *gin.Context) {
 	sell, err := doc.DataAt("sallers")
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"message": "Not found 2",
+			"message": "NotFound a Collection",
 		})
-		return
-		//log.Fatal(err)
 	}
 
-	type Seller_list []struct {
-		ID string `json:"ID"`
-	}
-
-	var s Seller_list
-
+	var s []*firestore.DocumentRef
 	mapstructure.Decode(sell, &s)
 
-	for _, s := range s {
-		dsnap, err := client.Collection("Seller").Doc(s.ID).Get(ctx)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"message": "Not found 2",
-			})
-			return
-			//log.Fatal(err)
-		}
-
-		mapstructure.Decode(dsnap.Data(), &xxx)
-		seller_x = append(seller_x, xxx)
-
-	
+	var seller models.Seller
+	var sellers []models.Seller
+	snaps, err := client.GetAll(ctx, s)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "Not found 2",
+		})
+	}
+	for i := 0; i < len(snaps); i++ {
+		mapstructure.Decode(snaps[i].Data(), &seller)
+		sellers = append(sellers, seller)
 	}
 
-	c.JSON(http.StatusOK, seller_x)
-
+	c.JSON(http.StatusOK, sellers)
 }
 
 // Add a books
@@ -147,6 +132,8 @@ func AddBook(c *gin.Context) {
 		})
 	}
 }
+
+
 
 // delete a book
 func DeleteBook(c *gin.Context) {

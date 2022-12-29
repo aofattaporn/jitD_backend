@@ -42,12 +42,15 @@ func GetAllUser(c *gin.Context) {
 
 func GetUserById(c *gin.Context) {
 
+	// set paramether 
 	id := c.Param("id")
 	user := models.User{}
 
+	// get client
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
+	// query data
 	dsnap, err := client.Collection("User").Doc(id).Get(ctx)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -55,11 +58,11 @@ func GetUserById(c *gin.Context) {
 		})
 	}
 
+	// map and return data 
 	m := dsnap.Data()
 	mapstructure.Decode(dsnap.Data(), &user)
 	fmt.Printf("Document data: %#v\n", m)
 	c.JSON(http.StatusOK, user)
-
 }
 
 func CreateUser(c *gin.Context) {
