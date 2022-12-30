@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"context"
-	// "fmt"
+	"fmt"
 	configs "jitD/configs"
 	models "jitD/models"
 	"log"
@@ -11,30 +11,38 @@ import (
 
 	"net/http"
 
-	// "google.golang.org/api/iterator"
+	"google.golang.org/api/iterator"
 
 	"github.com/gin-gonic/gin"
 )
 
 // Retrive all book
-// func GetAllBook(c *gin.Context) {
+func GetAllBook(c *gin.Context) {
 
-// 	books := []models.Book{}
-// 	ctx := context.Background()
-// 	client := configs.CreateClient(ctx)
+	books := []models.Book{}
+	ctx := context.Background()
+	client := configs.CreateClient(c)
 
-// 	iter := client.Collection("Book").Documents(ctx)
-// 	for {
-// 		book := models.Book{}
-//       mapstructure.Decode(iter.Data(), &book)
-//       books = append(books, book)
-// 	}
+	iter := client.Collection("Book").Documents(ctx)
+	for {
+		book := models.Book{}
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+			c.JSON(http.StatusNotFound, "msg: Not found")
+		}
+		mapstructure.Decode(doc.Data(), &book)
+		print(doc.Data())
+		books = append(books, book)
+	}
 
-// 	fmt.Println(books)
-// 	c.JSON(http.StatusOK, books)
+	fmt.Println(books)
+	c.JSON(http.StatusOK, books)
 
-// 	return
-// }
+}
 
 // Retrive book by id
 func GetBookById(c *gin.Context) {
