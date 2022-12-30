@@ -1,11 +1,18 @@
-FROM golang:1.19
 
-WORKDIR /usr/src/app
 
-# pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
-COPY go.mod go.sum ./
-RUN go mod download && go mod verify
+FROM golang:1.19.4-alpine3.17
 
-COPY . .
+WORKDIR /app
 
-CMD ["app"]
+COPY go.mod ./
+COPY go.sum ./
+RUN go mod download
+
+COPY main.go ./
+
+RUN go build -o /jitD
+
+EXPOSE 3000
+
+CMD [ "/jitD" ]
+

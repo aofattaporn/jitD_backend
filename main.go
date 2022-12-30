@@ -3,12 +3,10 @@ package main
 import (
 	// "fmt"
 	// "context"
-	"github.com/gin-gonic/gin"
-
-	// configs "jitD/configs"
-	routes "jitD/routers"
 	// "net/http"
-	// "time"
+
+	"github.com/gin-gonic/gin"
+	routes "jitD/routers"
 )
 
 func main() {
@@ -20,10 +18,9 @@ func main() {
 	// router.Use(gin.Logger())
 	router.Use(gin.Recovery())
  
-	// provide route
+	// // provide route
 	routes.UserRoute(router)
 	routes.BookRoutes(router)
-	
 
 	// configue on port 3000
 	router.Run("localhost:3000")

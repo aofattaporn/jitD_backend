@@ -5,7 +5,7 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	mapstructure "github.com/mitchellh/mapstructure"
-	"google.golang.org/api/iterator"
+	// "google.golang.org/api/iterator"
 	configs "jitD/configs"
 	models "jitD/models"
 	"log"
@@ -18,23 +18,18 @@ func GetAllBook(c *gin.Context) {
 	// create client
 	books := []models.Book{}
 	ctx := context.Background()
-	client := configs.CreateClient(c)
+	client := configs.CreateClient(ctx)
 
 	//get all books
-	iter := client.Collection("Book").Documents(ctx)
-	for {
+	docRef, err := client.Collection("Book").Documents(ctx).GetAll()
+	if err!= nil {
+      log.Fatal(err)
+	}
+
+	for _, data := range docRef {
 		book := models.Book{}
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			log.Fatal(err)
-			c.JSON(http.StatusNotFound, "msg: Not found")
-		}
-		mapstructure.Decode(doc.Data(), &book)
-		print(doc.Data())
-		books = append(books, book)
+      mapstructure.Decode(data.Data(), &book)
+      books = append(books, book)
 	}
 
 	// return data
@@ -71,7 +66,7 @@ func GetSellerById(c *gin.Context) {
 	client := configs.CreateClient(ctx)
 	defer client.Close()
 
-	doc, err := client.Collection("Book").Doc(id).Get(ctx)
+	dsnap, err := client.Collection("Book").Doc(id).Get(ctx)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": "Not found 1",
@@ -79,7 +74,7 @@ func GetSellerById(c *gin.Context) {
 		return
 	}
 
-	sell, err := doc.DataAt("sallers")
+	sell, err := dsnap.DataAt("sallers")
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": "NotFound a Collection",
@@ -115,7 +110,6 @@ func AddBook(c *gin.Context) {
 	book := models.Book{}
 
 	// Call BindJSON to bind the received JSON to
-	// newAlbum.
 	if err := c.BindJSON(&book); err != nil {
 		return
 	}
