@@ -1,12 +1,18 @@
-FROM golang
+FROM golang:1.19
 
-WORKDIR /app
+WORKDIR /usr/src/app
 
+# pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
+
+# copy all the files to gp app 
 COPY . .
-RUN go mod download
-RUN go build -o /jitD
 
+# Build the Go app
+RUN go build -o ./out/app .
+
+# port container is 3000 
 EXPOSE 3000
 
-CMD [ "/jitD" ]
-
+CMD ["./out/app"]
