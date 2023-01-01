@@ -1,4 +1,4 @@
-FROM golang:1.19
+FROM golang:1.19-alpine as builder
 
 WORKDIR /usr/src/app
 
@@ -11,6 +11,11 @@ COPY . .
 
 # Build the Go app
 RUN go build -o ./out/app .
+
+# Run stage 
+FROM alpine:3.13
+WORKDIR /usr/src/app
+COPY --from=builder /usr/src/app .
 
 # port container is 3000 
 EXPOSE 3000
