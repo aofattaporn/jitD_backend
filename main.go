@@ -19,7 +19,6 @@ func main() {
 	// router.Use(gin.Recovery())
  
 	// // provide route
-	// routes.UserRoute(router)
 	routes.BookRoutes(router)
 
 
