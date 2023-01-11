@@ -6,14 +6,11 @@ import (
 	configs "jitD/configs"
 	models "jitD/models"
 	"log"
-
-	mapstructure "github.com/mitchellh/mapstructure"
-
 	"net/http"
 
-	"google.golang.org/api/iterator"
-
 	"github.com/gin-gonic/gin"
+	mapstructure "github.com/mitchellh/mapstructure"
+	"google.golang.org/api/iterator"
 )
 
 // Retrive all book
@@ -41,7 +38,6 @@ func GetAllBook(c *gin.Context) {
 
 	fmt.Println(books)
 	c.JSON(http.StatusOK, books)
-
 }
 
 // Retrive book by id
@@ -112,7 +108,6 @@ func GetSellerById(c *gin.Context) {
 		mapstructure.Decode(dsnap.Data(), &xxx)
 		seller_x = append(seller_x, xxx)
 
-	
 	}
 
 	c.JSON(http.StatusOK, seller_x)

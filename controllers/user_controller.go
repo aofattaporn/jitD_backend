@@ -3,43 +3,36 @@ package controllers
 import (
 	"context"
 	"fmt"
-	mapstructure "github.com/mitchellh/mapstructure"
 	configs "jitD/configs"
 	models "jitD/models"
 	"log"
-
 	"net/http"
 
-	"google.golang.org/api/iterator"
-
 	"github.com/gin-gonic/gin"
+	mapstructure "github.com/mitchellh/mapstructure"
 )
 
+// Get all user
 func GetAllUser(c *gin.Context) {
 
 	users := []models.User{}
+	user := models.User{}
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
-	iter := client.Collection("User").Documents(ctx)
-	for {
-		user := models.User{}
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			log.Fatal(err)
-			c.JSON(http.StatusNotFound, "Not found")
-		}
-		mapstructure.Decode(doc.Data(), &user)
-		users = append(users, user)
+	snap, err := client.Collection("User").Documents(ctx).GetAll()
+	if err != nil {
+		return
 	}
 
-	fmt.Println(users)
+	for _, element := range snap {
+		mapstructure.Decode(element.Data(), &user)
+		users = append(users, user)
+	}
 	c.JSON(http.StatusOK, users)
 }
 
+// Get user by id
 func GetUserById(c *gin.Context) {
 
 	id := c.Param("id")
@@ -59,23 +52,23 @@ func GetUserById(c *gin.Context) {
 	mapstructure.Decode(dsnap.Data(), &user)
 	fmt.Printf("Document data: %#v\n", m)
 	c.JSON(http.StatusOK, user)
-
 }
 
+// Create User
 func CreateUser(c *gin.Context) {
 
 	// create client
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
+	user := models.User{}
 
-	// seection create data
-	_, _, err := client.Collection("User").Add(ctx, map[string]interface{}{
-		"email":    "user123@hotmail.com",
-		"password": "1111111111",
-		"userName": "attaporrn1234",
-	})
+	// section create data
+	// Call BindJSON to bind the received JSON to
+	if err := c.BindJSON(&user); err != nil {
+		return
+	}
 
-	// check nil value
+	_, _, err := client.Collection("User").Add(ctx, user)
 	if err != nil {
 		log.Fatalf("Failed adding alovelace: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -88,29 +81,24 @@ func CreateUser(c *gin.Context) {
 	}
 }
 
+// Delete User
 func DeleteUser(c *gin.Context) {
 
-	// users := []models.User{}
+	id := c.Param("id")
+	user := models.User{}
+
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
-	iter := client.Collection("User").Documents(ctx)
-	for {
-		// user := models.User{}
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			log.Fatal(err)
-			c.JSON(http.StatusNotFound, "Not found")
-		}
-		doc.Ref.Delete(ctx)
-		// mapstructure.Decode(doc.Data(), &user)
-		// users = append(users, user)
+	dsnap, err := client.Collection("User").Doc(id).Get(ctx)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "cant create",
+		})
 	}
 
-	c.JSON(http.StatusAccepted, gin.H{
-		"message": "delete data success",
-	})
+	m := dsnap.Data()
+	mapstructure.Decode(dsnap.Data(), &user)
+	fmt.Printf("Document data: %#v\n", m)
+	c.JSON(http.StatusOK, user)
 }
