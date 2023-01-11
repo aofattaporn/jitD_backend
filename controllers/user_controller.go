@@ -65,6 +65,7 @@ func CreateUser(c *gin.Context) {
 	// section create data
 	// Call BindJSON to bind the received JSON to
 	if err := c.BindJSON(&user); err != nil {
+		log.Fatalln(err)
 		return
 	}
 
