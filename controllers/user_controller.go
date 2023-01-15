@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 
+	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 	mapstructure "github.com/mitchellh/mapstructure"
 )
@@ -78,6 +79,39 @@ func CreateUser(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusCreated, gin.H{
 			"message": "create data success",
+		})
+	}
+}
+
+// Create User
+func NamingPet(c *gin.Context) {
+
+	id := c.Param("id")
+	pet := models.User{}
+
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
+	if err := c.BindJSON(&pet); err != nil {
+		log.Fatalln(err)
+		return
+	}
+
+	fmt.Println(pet.PetName)
+
+	_, err := client.Collection("User").Doc(id).Update(ctx, []firestore.Update{
+		{
+			Path:  "PetName",
+			Value: pet.PetName,
+		},
+	})
+
+	if err != nil {
+		// Handle any errors in an appropriate way, such as returning them.
+		log.Printf("An error has occurred: %s", err)
+	} else {
+		c.JSON(http.StatusCreated, gin.H{
+			"message": "naming data success",
 		})
 	}
 }
