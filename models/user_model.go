@@ -1,7 +1,7 @@
 package models
 
 type User struct {
-	TokenID string `json:"TokenId"`
+	UserID  string `json:"UserID"`
 	PetName string `json:"petName"`
 	Point   int    `json:"point"`
 	Config  struct {
