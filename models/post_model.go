@@ -1,8 +1,11 @@
 package models
 
+import "time"
+
 type Post struct {
-	Post_id int    `json:"post_id"`
-	Content string `json:"content"`
-	Comment string `json:"comment,omitempty"`
-	Like    string `json:"like,omitempty"`
+	Content  string    `json:"content"`
+	Date     time.Time `firestore:"updated,omitempty"`
+	Comment  []string  `json:"comment,omitempty"`
+	Like     []string  `json:"like,omitempty"`
+	IsPublic bool      `json:"IsPublic"`
 }
