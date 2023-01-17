@@ -7,7 +7,7 @@ type User struct {
 	Config  struct {
 		Noti bool `json:"noti"`
 	} `json:"config"`
-	Posts    []string `json:"Post"`
+	Posts    []string `json:posts,omitempty"`
 	Comments []string `json:"comments"`
 	Likes    []string `json:"likes"`
 }

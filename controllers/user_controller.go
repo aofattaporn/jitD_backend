@@ -70,6 +70,11 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
+	// assign rmpthy object
+	user.Posts = []string{}
+	user.Comments = []string{}
+	user.Likes = []string{}
+
 	_, _, err := client.Collection("User").Add(ctx, user)
 	if err != nil {
 		log.Fatalf("Failed adding alovelace: %v", err)
