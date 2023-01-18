@@ -63,8 +63,7 @@ func CreateUser(c *gin.Context) {
 	client := configs.CreateClient(ctx)
 	user := models.User{}
 
-	// section create data
-	// Call BindJSON to bind the received JSON to
+	// Call BindJSON to bind the received JSON body
 	if err := c.BindJSON(&user); err != nil {
 		log.Fatalln(err)
 		return
@@ -72,9 +71,10 @@ func CreateUser(c *gin.Context) {
 
 	// assign rmpthy object
 	user.Posts = []*firestore.DocumentRef{}
-	user.Comments = []string{}
-	user.Likes = []string{}
+	user.Comments = []*firestore.DocumentRef{}
+	user.Likes = []*firestore.DocumentRef{}
 
+	// add data to document
 	_, _, err := client.Collection("User").Add(ctx, user)
 	if err != nil {
 		log.Fatalf("Failed adding alovelace: %v", err)

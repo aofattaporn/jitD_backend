@@ -2,13 +2,12 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	configs "jitD/configs"
 	models "jitD/models"
+	"log"
 	"net/http"
 
-	// "strings"
-	"time"
+	"cloud.google.com/go/firestore"
 
 	"github.com/gin-gonic/gin"
 	mapstructure "github.com/mitchellh/mapstructure"
@@ -16,52 +15,48 @@ import (
 
 // service create post
 func CreatePost(c *gin.Context) {
-	// iniitail variable
-	id := c.Param("id")
-	user := models.User{}
-	post := models.Post{}
+
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
+	post := models.Post{}
 
-	// service create post
-	if err := c.ShouldBindJSON(&post); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// Call BindJSON to bind the received JSON body
+	if err := c.BindJSON(&post); err != nil {
+		log.Fatalln(err)
 		return
 	}
 
-	post.Comment = []string{}
-	post.Like = []string{}
-	post.Date = time.Now()
-
-	//  Adding document post to collection
-	iddd, _, err3 := client.Collection("Post").Add(ctx, post)
-	if err3 != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "cant create",
-		})
-	}
-
-	// find user colection and set data to DB
-	dsnap, err := client.Collection("User").Where("UserID", "==", id).Documents(ctx).GetAll()
+	//----------- adding post data to Posts ---------------
+	post.Category = []string{}
+	post.Comment = []*firestore.DocumentRef{}
+	post.Like = []*firestore.DocumentRef{}
+	postRef, _, err := client.Collection("Post").Add(ctx, post)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "cant update",
+			"message": "Cant to create post",
 		})
 	}
 
-	mapstructure.Decode(dsnap[0].Data(), &user)
-	user.Posts = append(user.Posts, iddd)
-	fmt.Printf("user.Posts: %v\n", iddd.Parent)
-
-	_, err2 := client.Collection("User").Doc(id).Set(ctx, user)
+	//----------- updating to user ---------------
+	id := c.Param("id")
+	user := models.User{}
+	dsnap, err2 := client.Collection("User").Where("UserID", "==", id).Documents(ctx).GetAll()
 	if err2 != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "cant update",
+			"message": "Cant to find userid",
 		})
 	}
-	c.JSON(http.StatusOK, post)
+	mapstructure.Decode(dsnap[0].Data(), &user)
+	user.Posts = append(user.Posts, postRef)
+	setData, _ := client.Collection("User").Doc(dsnap[0].Ref.ID).Set(ctx, user)
+
+	//----------- return data ---------------
+	c.JSON(http.StatusOK, setData)
 }
 
+// service get my post
+
+// service get all post
 func GetAllPost(c *gin.Context) {
 	posts := []models.Post{}
 	post := models.Post{}
@@ -79,3 +74,5 @@ func GetAllPost(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, posts)
 }
+
+// service deleing post

@@ -1,11 +1,16 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"cloud.google.com/go/firestore"
+)
 
 type Post struct {
-	Content  string    `json:"content"`
-	Date     time.Time `firestore:"updated,omitempty"`
-	Comment  []string  `json:"comment,omitempty"`
-	Like     []string  `json:"like,omitempty"`
-	IsPublic bool      `json:"IsPublic"`
+	Content  string                   `json:"content"`
+	Date     time.Time                `firestore:"updated,omitempty"`
+	IsPublic bool                     `json:"IsPublic"`
+	Category []string                 `json:"Category,omitempty"`
+	Comment  []*firestore.DocumentRef `json:"comment,omitempty"`
+	Like     []*firestore.DocumentRef `json:"like,omitempty"`
 }
