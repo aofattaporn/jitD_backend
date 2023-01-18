@@ -62,8 +62,6 @@ func GetBookById(c *gin.Context) {
 // get seller by id
 func GetSellerById(c *gin.Context) {
 
-	// id := c.Param("id")
-	// book := models.Book{}
 	seller_x := []models.Seller{}
 	xxx := models.Seller{}
 	ctx := context.Background()
@@ -111,7 +109,6 @@ func GetSellerById(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, seller_x)
-
 }
 
 // Add a books

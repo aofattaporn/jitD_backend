@@ -57,21 +57,31 @@ func CreatePost(c *gin.Context) {
 
 // service get my post
 func GetMyPost(c *gin.Context) {
-	posts := []models.Post{}
-	post := models.Post{}
+
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
-
-	snap, err := client.Collection("Post").Documents(ctx).GetAll()
-	if err != nil {
-		return
+	//----------- finding my id user ---------------
+	id := c.Param("id")
+	user := models.User{}
+	dsnap, err2 := client.Collection("User").Where("UserID", "==", id).Documents(ctx).GetAll()
+	if err2 != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Cant to find userid",
+		})
 	}
 
-	for _, element := range snap {
-		fmt.Println(element.Data())
+	//----------- finding post from data user ---------------
+	// data, err3 := client.Collection("Post").
+	mapstructure.Decode(dsnap[0].Data(), &user)
+	post := models.Post{}
+	posts := []models.Post{}
+
+	X, _ := client.GetAll(ctx, user.Posts)
+	for _, element := range X {
 		mapstructure.Decode(element.Data(), &post)
 		posts = append(posts, post)
 	}
+
 	c.JSON(http.StatusOK, posts)
 }
 
