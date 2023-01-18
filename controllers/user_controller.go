@@ -71,7 +71,7 @@ func CreateUser(c *gin.Context) {
 	}
 
 	// assign rmpthy object
-	user.Posts = []string{}
+	user.Posts = []*firestore.DocumentRef{}
 	user.Comments = []string{}
 	user.Likes = []string{}
 
