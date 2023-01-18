@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	configs "jitD/configs"
 	models "jitD/models"
 	"log"
@@ -55,6 +56,24 @@ func CreatePost(c *gin.Context) {
 }
 
 // service get my post
+func GetMyPost(c *gin.Context) {
+	posts := []models.Post{}
+	post := models.Post{}
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
+	snap, err := client.Collection("Post").Documents(ctx).GetAll()
+	if err != nil {
+		return
+	}
+
+	for _, element := range snap {
+		fmt.Println(element.Data())
+		mapstructure.Decode(element.Data(), &post)
+		posts = append(posts, post)
+	}
+	c.JSON(http.StatusOK, posts)
+}
 
 // service get all post
 func GetAllPost(c *gin.Context) {
@@ -63,12 +82,13 @@ func GetAllPost(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
-	snap, err := client.Collection("User").Documents(ctx).GetAll()
+	snap, err := client.Collection("Post").Documents(ctx).GetAll()
 	if err != nil {
 		return
 	}
 
 	for _, element := range snap {
+		fmt.Println(element.Data())
 		mapstructure.Decode(element.Data(), &post)
 		posts = append(posts, post)
 	}

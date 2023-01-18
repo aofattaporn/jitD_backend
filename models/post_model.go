@@ -8,7 +8,7 @@ import (
 
 type Post struct {
 	Content  string                   `json:"content"`
-	Date     time.Time                `firestore:"updated,omitempty"`
+	Date     time.Time                `json:"Date,omitempty"`
 	IsPublic bool                     `json:"IsPublic"`
 	Category []string                 `json:"Category,omitempty"`
 	Comment  []*firestore.DocumentRef `json:"comment,omitempty"`
