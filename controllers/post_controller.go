@@ -91,6 +91,7 @@ func GetAllPost(c *gin.Context) {
 	post := models.Post{}
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
+	fmt.Printf("c.Request.Header.Get(\"id\"): %v\n", c.Request.Header.Get("id"))
 
 	snap, err := client.Collection("Post").Documents(ctx).GetAll()
 	if err != nil {

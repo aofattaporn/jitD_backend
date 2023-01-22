@@ -22,6 +22,8 @@ func main() {
 	// provide route
 	routes.BookRoutes(router)
 	routes.UserRoute(router)
+
+	// checking token
 	routes.PostRoutes(router)
 
 	// configue on port 3000
