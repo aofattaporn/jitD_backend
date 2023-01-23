@@ -8,6 +8,7 @@ import (
 	routes "jitD/routers"
 
 	"github.com/gin-gonic/gin"
+	//"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -22,6 +23,8 @@ func main() {
 	// provide route
 	routes.BookRoutes(router)
 	routes.UserRoute(router)
+	routes.CommentRoutes(router)
+	routes.PostRoutes(router)
 
 	// checking token
 	routes.PostRoutes(router)
