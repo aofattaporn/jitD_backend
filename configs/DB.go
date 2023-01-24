@@ -76,12 +76,13 @@ func Verify(c *gin.Context) {
 	if err := c.ShouldBindHeader(&h); err != nil {
 		c.JSON(http.StatusBadRequest, err)
 		c.Abort()
+	} else {
+		splitToken := strings.Split(c.Request.Header.Get("Authorization"), "Bearer ")
+		reqToken := splitToken[1]
+
+		fmt.Printf("reqToken: %v\n", reqToken)
+
+		CreateCheckAuth(c, c, reqToken)
+
 	}
-
-	splitToken := strings.Split(c.Request.Header.Get("Authorization"), "Bearer ")
-	reqToken := splitToken[1]
-
-	fmt.Printf("reqToken: %v\n", reqToken)
-
-	CreateCheckAuth(c, c, reqToken)
 }

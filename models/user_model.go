@@ -5,12 +5,20 @@ import (
 )
 
 type User struct {
-	UserID  string `json:"userID"`
 	PetName string `json:"petName"`
 	Point   int    `json:"point"`
 
 	// Reference collection
-	Posts    []*firestore.DocumentRef `json:posts,omitempty"`
+	Posts    []*firestore.DocumentRef `json:"posts,omitempty"`
 	Comments []*firestore.DocumentRef `json:"comments,omitempty"`
 	Likes    []*firestore.DocumentRef `json:"likes,omitempty"`
+}
+
+type UserResponse struct {
+	UserId        string `json:"userId"`
+	PetName       string `json:"petName"`
+	Point         int    `json:"point"`
+	CountPosts    int    `json:"countPosts"`
+	CountComments int    `json:"countComments"`
+	CountLikes    int    `json:"countLikes"`
 }

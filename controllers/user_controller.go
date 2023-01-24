@@ -13,51 +13,6 @@ import (
 	mapstructure "github.com/mitchellh/mapstructure"
 )
 
-// Get all user
-func GetAllUser(c *gin.Context) {
-
-	users := []models.User{}
-	user := models.User{}
-	ctx := context.Background()
-	client := configs.CreateClient(ctx)
-
-	// retrieve all user
-	snap, err := client.Collection("User").Documents(ctx).GetAll()
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "cant get infomation",
-		})
-	}
-
-	// maping data to user model
-	for _, element := range snap {
-		mapstructure.Decode(element.Data(), &user)
-		users = append(users, user)
-	}
-	c.JSON(http.StatusOK, users)
-}
-
-// Get user by id
-func GetUserById(c *gin.Context) {
-
-	id := c.Param("id")
-	user := models.User{}
-	ctx := context.Background()
-	client := configs.CreateClient(ctx)
-
-	// retrieve user by id
-	dsnap, err := client.Collection("User").Doc(id).Get(ctx)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "cant get infomation",
-		})
-	}
-
-	// maping data to user model
-	mapstructure.Decode(dsnap.Data(), &user)
-	c.JSON(http.StatusOK, user)
-}
-
 // Create a User
 func CreateUser(c *gin.Context) {
 
@@ -99,10 +54,76 @@ func CreateUser(c *gin.Context) {
 	}
 }
 
+// Get all user
+func GetAllUser(c *gin.Context) {
+
+	users := []models.UserResponse{}
+	userRes := models.UserResponse{}
+	user := models.User{}
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
+	// retrieve all user
+	snap, err := client.Collection("User").Documents(ctx).GetAll()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "cant get infomation",
+		})
+	}
+
+	// maping data to user model
+	for _, element := range snap {
+		/// mapdata and count list
+		mapstructure.Decode(element.Data(), &user)
+
+		// user.Likes = len(user.Likes)
+		userRes.UserId = element.Ref.ID
+		userRes.PetName = user.PetName
+		userRes.Point = user.Point
+		userRes.CountPosts = len(user.Posts)
+		userRes.CountComments = len(user.Comments)
+		userRes.CountLikes = len(user.Likes)
+
+		users = append(users, userRes)
+	}
+	c.JSON(http.StatusOK, users)
+}
+
+// Get user by id
+func GetUserById(c *gin.Context) {
+
+	print("sdfsdfdsfdf")
+
+	id := c.Request.Header.Get("id")
+	user := models.User{}
+	userRes := models.UserResponse{}
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
+	// retrieve user by id
+	dsnap, err := client.Collection("User").Doc(id).Get(ctx)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "cant get infomation",
+		})
+	}
+	// maping to response
+	userRes.UserId = dsnap.Ref.ID
+	userRes.PetName = user.PetName
+	userRes.Point = user.Point
+	userRes.CountPosts = len(user.Posts)
+	userRes.CountComments = len(user.Comments)
+	userRes.CountLikes = len(user.Likes)
+
+	// maping data to user model
+	mapstructure.Decode(dsnap.Data(), &userRes)
+	c.JSON(http.StatusOK, userRes)
+}
+
 // naming a pet
 func NamingPet(c *gin.Context) {
 
-	id := c.Param("id")
+	id := c.Request.Header.Get("id")
 	pet := models.User{}
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
@@ -131,31 +152,28 @@ func NamingPet(c *gin.Context) {
 		})
 		return
 	} else {
-		c.JSON(http.StatusCreated, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"message": "naming data success",
 		})
 		return
 	}
 }
 
+// ------------- unused -------------
+
 // Delete User
 func DeleteUser(c *gin.Context) {
 
-	id := c.Param("id")
-	user := models.User{}
-
+	id := c.Request.Header.Get("id")
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
-	dsnap, err := client.Collection("User").Doc(id).Get(ctx)
+	dsnap, err := client.Collection("User").Doc(id).Delete(ctx)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "cant create",
 		})
 	}
+	c.JSON(http.StatusOK, dsnap.UpdateTime)
 
-	m := dsnap.Data()
-	mapstructure.Decode(dsnap.Data(), &user)
-	fmt.Printf("Document data: %#v\n", m)
-	c.JSON(http.StatusOK, user)
 }
