@@ -54,10 +54,8 @@ func CreateCheckAuth(ctx context.Context, c *gin.Context, x string) {
 
 	client, err := app.Auth(ctx)
 	token, err := client.VerifyIDToken(ctx, x)
-	// token, err client.Verify
 	if err != nil {
-		// log.Fatalf("Failed to create client: %v", err)
-		c.JSON(http.StatusNonAuthoritativeInfo, gin.H{
+		c.JSON(http.StatusForbidden, gin.H{
 			"message": "cant access data",
 		})
 		c.Abort()
@@ -76,7 +74,7 @@ func Verify(c *gin.Context) {
 	h := testHeader{}
 
 	if err := c.ShouldBindHeader(&h); err != nil {
-		c.JSON(http.StatusNetworkAuthenticationRequired, err)
+		c.JSON(http.StatusBadRequest, err)
 		c.Abort()
 	}
 

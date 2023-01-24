@@ -77,19 +77,24 @@ func CreateUser(c *gin.Context) {
 	user.Comments = []*firestore.DocumentRef{}
 	user.Likes = []*firestore.DocumentRef{}
 
+	// hinde
+	if err := c.BindHeader(&user); err != nil {
+		errors = append(errors, err)
+	}
+
+	user_id := c.Request.Header.Get("id")
+
 	// add data to document
-	_, _, err := client.Collection("User").Add(ctx, user)
-	errors = append(errors, err)
+	fmt.Printf("header: %v\n", user_id)
+	_, err := client.Collection("User").Doc(user_id).Set(ctx, user)
 	if err != nil {
-		for _, err := range errors {
-			log.Fatalf("Failed adding alovelace: %v", err)
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": "cant create data",
-			})
-		}
+		log.Printf("An error has occurred: %s", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "create data success",
+		})
 	} else {
 		c.JSON(http.StatusCreated, gin.H{
-			"message": "create data success",
+			"message": "createdata success",
 		})
 	}
 }

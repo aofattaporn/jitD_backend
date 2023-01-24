@@ -105,5 +105,3 @@ func GetAllPost(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, posts)
 }
-
-// service deleing post
