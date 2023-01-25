@@ -13,6 +13,6 @@ func UserRoute(route *gin.Engine) {
 	v1.GET("/id", controllers.GetUserById)
 	v1.PUT("/pet/id", controllers.NamingPet)
 
-	// v1.GET("/posts/:id", controllers.GetMyPost)
-	// v1.DELETE("/id", controllers.DeleteUser)
+	// # -------------- unsuse ---------------
+	v1.DELETE("/id", controllers.DeleteUser)
 }

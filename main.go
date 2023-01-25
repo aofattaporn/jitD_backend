@@ -18,7 +18,7 @@ func main() {
 	router := gin.Default()
 
 	// use middleware
-	router.Use(gin.Logger())
+	// router.Use(gin.Logger())
 	// router.Use(gin.Recovery())
 
 	// provide route

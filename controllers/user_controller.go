@@ -175,5 +175,6 @@ func DeleteUser(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, dsnap.UpdateTime)
-
 }
+
+// update user

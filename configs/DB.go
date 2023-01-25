@@ -80,7 +80,7 @@ func Verify(c *gin.Context) {
 		splitToken := strings.Split(c.Request.Header.Get("Authorization"), "Bearer ")
 		reqToken := splitToken[1]
 
-		fmt.Printf("reqToken: %v\n", reqToken)
+		// fmt.Printf("reqToken: %v\n", reqToken)
 
 		CreateCheckAuth(c, c, reqToken)
 
