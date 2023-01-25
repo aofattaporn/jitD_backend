@@ -1,13 +1,24 @@
 package models
 
+import (
+	"cloud.google.com/go/firestore"
+)
+
 type User struct {
-	TokenID string `json:"TokenId"`
 	PetName string `json:"petName"`
 	Point   int    `json:"point"`
-	Config  struct {
-		Noti bool `json:"noti"`
-	} `json:"config"`
-	Posts    []string `json:"Post"`
-	Comments []string `json:"comments"`
-	Likes    []string `json:"likes"`
+
+	// Reference collection
+	Posts    []*firestore.DocumentRef `json:"posts,omitempty"`
+	Comments []*firestore.DocumentRef `json:"comments,omitempty"`
+	Likes    []*firestore.DocumentRef `json:"likes,omitempty"`
+}
+
+type UserResponse struct {
+	UserId        string `json:"userId"`
+	PetName       string `json:"petName"`
+	Point         int    `json:"point"`
+	CountPosts    int    `json:"countPosts"`
+	CountComments int    `json:"countComments"`
+	CountLikes    int    `json:"countLikes"`
 }
