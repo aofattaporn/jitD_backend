@@ -108,30 +108,47 @@ func GetMyPost(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 	//----------- finding my id user ---------------
-	id := c.Param("id")
+	id := c.Request.Header.Get("id")
 	user := models.User{}
-	dsnap, err2 := client.Collection("User").Where("UserID", "==", id).Documents(ctx).GetAll()
-	if err2 != nil {
+
+	dsnap, err := client.Collection("User").Doc(id).Get(ctx)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Cant to find userid",
+			"message": "cant get infomation",
 		})
 	}
 
-	//----------- finding post from data user ---------------
-	// data, err3 := client.Collection("Post").
-	mapstructure.Decode(dsnap[0].Data(), &user)
+	postResf := user.Posts
+	postRes := models.PostResponse{}
+	postsRes := []models.PostResponse{}
 	post := models.Post{}
-	posts := []models.Post{}
 
-	X, _ := client.GetAll(ctx, user.Posts)
+	postData, typeerr := dsnap.DataAt("Posts")
+	if typeerr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "cant get get type information",
+		})
+	}
+	mapstructure.Decode(postData, &postResf)
+
+	X, _ := client.GetAll(ctx, postResf)
 	for _, element := range X {
 		mapstructure.Decode(element.Data(), &post)
-		posts = append(posts, post)
+		mapstructure.Decode(post, &postRes)
+		postRes.UserId = id
+		postRes.PostId = element.Ref.ID
+		postRes.Date = post.Date
+		postRes.CountComment = len(post.Comment)
+		postRes.CountLike = len(post.Like)
+
+		postsRes = append(postsRes, postRes)
 	}
 
-	c.JSON(http.StatusOK, posts)
+	c.JSON(http.StatusOK, postsRes)
 }
 
 // ------------- unused -------------
 
 // update user
+
+// delete user
