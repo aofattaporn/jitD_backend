@@ -5,9 +5,11 @@ import (
 	// "context"
 	// "net/http"
 
+	configs "jitD/configs"
 	routes "jitD/routers"
 
 	"github.com/gin-gonic/gin"
+	//"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -19,9 +21,16 @@ func main() {
 	// router.Use(gin.Logger())
 	// router.Use(gin.Recovery())
 
-	// // provide route
+	// provide route
 	routes.BookRoutes(router)
+
+	router.Use(configs.Verify)
 	routes.UserRoute(router)
+	// routes.CommentRoutes(router)
+	routes.PostRoutes(router)
+
+	// checking token
+	// routes.PostRoutes(router)
 
 	// configue on port 3000
 	router.Run("0.0.0.0:3000")

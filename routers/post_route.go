@@ -1,12 +1,15 @@
 package routers
 
 import (
-	"github.com/gin-gonic/gin"
 	controllers "jitD/controllers"
+
+	"github.com/gin-gonic/gin"
 )
 
 func PostRoutes(route *gin.Engine) {
-	v1 := route.Group("/")
-	v1.GET("getAll/", controllers.GetAllUser)
-	v1.GET("getById/", controllers.GetAllUser)
+	v1 := route.Group("v1/posts")
+	v1.POST("/", controllers.CreatePost)
+	v1.GET("/", controllers.GetAllPost)
+	v1.GET("/id", controllers.GetMyPost)
+
 }

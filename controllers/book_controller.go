@@ -62,8 +62,6 @@ func GetBookById(c *gin.Context) {
 // get seller by id
 func GetSellerById(c *gin.Context) {
 
-	// id := c.Param("id")
-	// book := models.Book{}
 	seller_x := []models.Seller{}
 	xxx := models.Seller{}
 	ctx := context.Background()
@@ -77,6 +75,7 @@ func GetSellerById(c *gin.Context) {
 		})
 		return
 	}
+	fmt.Print(doc.Data())
 
 	sell, err := doc.DataAt("sallers")
 	if err != nil {
@@ -107,11 +106,9 @@ func GetSellerById(c *gin.Context) {
 
 		mapstructure.Decode(dsnap.Data(), &xxx)
 		seller_x = append(seller_x, xxx)
-
 	}
 
 	c.JSON(http.StatusOK, seller_x)
-
 }
 
 // Add a books
