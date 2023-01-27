@@ -147,6 +147,10 @@ func GetMyPost(c *gin.Context) {
 	c.JSON(http.StatusOK, postsRes)
 }
 
+func deletePost(c *gin.Context) {
+
+}
+
 // ------------- unused -------------
 
 // update user
