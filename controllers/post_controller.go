@@ -7,6 +7,7 @@ import (
 	models "jitD/models"
 	"log"
 	"net/http"
+	"sort"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -72,8 +73,6 @@ func CreatePost(c *gin.Context) {
 // service get all post
 func GetAllPost(c *gin.Context) {
 	posts := []models.PostResponse{}
-
-	// post := models.Post{}
 	postRes := models.PostResponse{}
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
@@ -84,8 +83,6 @@ func GetAllPost(c *gin.Context) {
 	}
 
 	for _, element := range snap {
-		// fmt.Println(element.Data())
-		// id := c.Request.Header.Get("id")
 		post := models.Post{}
 		mapstructure.Decode(element.Data(), &post)
 		mapstructure.Decode(post, &postRes)
@@ -98,7 +95,6 @@ func GetAllPost(c *gin.Context) {
 		postRes.Date = post.Date
 
 		posts = append(posts, postRes)
-		// fmt.Printf("post: %v\n", post)
 	}
 	c.JSON(http.StatusOK, posts)
 }
@@ -148,25 +144,63 @@ func GetMyPost(c *gin.Context) {
 	c.JSON(http.StatusOK, postsRes)
 }
 
+// update user
+
 func DeleteMyPost(c *gin.Context) {
 	post_id := c.Param("post_id")
+	user_id := c.Request.Header.Get("id")
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
-	_, err := client.Collection("User").Doc(post_id).Delete(ctx)
-	if err != nil {
+	userData, err := client.Collection("User").Doc(user_id).Get(ctx)
+	user := models.User{}
+	mapstructure.Decode(userData.Data(), &user)
+	user.Posts = RemoveCopy(user.Posts, post_id)
 
+	_, setErr := client.Collection("User").Doc(user_id).Set(ctx, user)
+	if setErr != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "delete cant to delete data",
+		})
+		return
+	}
+
+	// delete document post
+	_, err2 := client.Collection("Post").Doc(post_id).Delete(ctx)
+	if err2 != nil {
 		log.Printf("An error has occurred: %s", err)
 	} else {
+
 		c.JSON(http.StatusOK, gin.H{
 			"message": "delete post success",
 		})
-
 	}
 }
 
-// ------------- unused -------------
+func RemoveCopy(slice []*firestore.DocumentRef, id string) []*firestore.DocumentRef {
+	var idx int
+	for index, dr := range slice {
+		if dr.ID == id {
+			idx = index
+			break
+		}
+	}
+	slice = append(slice[:idx], slice[idx+1:]...)
+	return slice
+}
 
-// update user
+func binarySearch(slice []*firestore.DocumentRef, id string) []*firestore.DocumentRef {
+
+	i := sort.Search(len(slice), func(i int) bool { return id <= slice[i].ID })
+	if i < len(slice) && slice[i].ID == id {
+		fmt.Printf("Found %s at index %d in %v.\n", id, i, slice)
+	} else {
+		fmt.Printf("Did not find %s in %v.\n", id, slice)
+	}
+	slice = append(slice[:i], slice[i+1:]...)
+	return slice
+}
+
+// ------------- unused -------------
 
 // delete user
