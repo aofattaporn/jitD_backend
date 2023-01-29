@@ -82,14 +82,21 @@ func GetAllPost(c *gin.Context) {
 		return
 	}
 
+	// dsnap, err := client.Collection("User").Doc(id).Get(ctx)
+	// if err != nil {
+	// 	c.JSON(http.StatusBadRequest, gin.H{
+	// 		"message": "cant get infomation",
+	// 	})
+	// }
+
 	for _, element := range snap {
 		// fmt.Println(element.Data())
-		id := c.Request.Header.Get("id")
+		// id := c.Request.Header.Get("id")
 		post := models.Post{}
 		mapstructure.Decode(element.Data(), &post)
 		mapstructure.Decode(post, &postRes)
 
-		postRes.UserId = id
+		postRes.UserId = element.Ref.Parent.ID
 		postRes.PostId = element.Ref.ID
 		postRes.CountLike = len(post.Like)
 		postRes.CountComment = len(post.Comment)
