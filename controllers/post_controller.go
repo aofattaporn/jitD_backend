@@ -147,8 +147,21 @@ func GetMyPost(c *gin.Context) {
 	c.JSON(http.StatusOK, postsRes)
 }
 
-func deletePost(c *gin.Context) {
+func DeleteMyPost(c *gin.Context) {
+	post_id := c.Param("post_id")
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
 
+	_, err := client.Collection("User").Doc(post_id).Delete(ctx)
+	if err != nil {
+
+		log.Printf("An error has occurred: %s", err)
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "delete post success",
+		})
+
+	}
 }
 
 // ------------- unused -------------
