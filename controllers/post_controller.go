@@ -21,6 +21,7 @@ func CreatePost(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 	post := models.Post{}
+	id := c.Request.Header.Get("id")
 
 	// Call BindJSON to bind the received JSON body
 	if err := c.BindJSON(&post); err != nil {
@@ -35,6 +36,13 @@ func CreatePost(c *gin.Context) {
 	currentTime := time.Now().Format(time.RFC3339)
 	currentDateTime, err := time.Parse(time.RFC3339, currentTime)
 
+	dsnap, err2 := client.Collection("User").Doc(id).Get(ctx)
+	if err2 != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Cant to find userid",
+		})
+	}
+	post.UserID = dsnap.Ref
 	post.Date = currentDateTime
 	post.Comment = []*firestore.DocumentRef{}
 	post.Like = []*firestore.DocumentRef{}
@@ -47,14 +55,7 @@ func CreatePost(c *gin.Context) {
 	}
 
 	//----------- updating to user ---------------
-	id := c.Request.Header.Get("id")
 	user := models.User{}
-	dsnap, err2 := client.Collection("User").Doc(id).Get(ctx)
-	if err2 != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Cant to find userid",
-		})
-	}
 	mapstructure.Decode(dsnap.Data(), &user)
 	user.Posts = append(user.Posts, postRef)
 	setData, _ := client.Collection("User").Doc(id).Set(ctx, user)
@@ -82,13 +83,6 @@ func GetAllPost(c *gin.Context) {
 		return
 	}
 
-	// dsnap, err := client.Collection("User").Doc(id).Get(ctx)
-	// if err != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{
-	// 		"message": "cant get infomation",
-	// 	})
-	// }
-
 	for _, element := range snap {
 		// fmt.Println(element.Data())
 		// id := c.Request.Header.Get("id")
@@ -96,7 +90,7 @@ func GetAllPost(c *gin.Context) {
 		mapstructure.Decode(element.Data(), &post)
 		mapstructure.Decode(post, &postRes)
 
-		postRes.UserId = element.Ref.Parent.ID
+		postRes.UserId = post.UserID.ID
 		postRes.PostId = element.Ref.ID
 		postRes.CountLike = len(post.Like)
 		postRes.CountComment = len(post.Comment)
