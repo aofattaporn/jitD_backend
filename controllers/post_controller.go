@@ -82,21 +82,12 @@ func GetAllPost(c *gin.Context) {
 		return
 	}
 
-	dsnap, err := client.Collection("User").Doc(id).Get(ctx)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "cant get infomation",
-		})
-	}
-	postData, typeerr := dsnap.DataAt("Posts")
-	if typeerr != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "cant get get type information",
-		})
-	}
-	user := models.User{}
-	postResf := user.Posts
-	mapstructure.Decode(postData, &postResf)
+	// dsnap, err := client.Collection("User").Doc(id).Get(ctx)
+	// if err != nil {
+	// 	c.JSON(http.StatusBadRequest, gin.H{
+	// 		"message": "cant get infomation",
+	// 	})
+	// }
 
 	for _, element := range snap {
 		// fmt.Println(element.Data())
