@@ -54,6 +54,29 @@ func CreateUser(c *gin.Context) {
 	}
 }
 
+// Create a User
+func SignIn(c *gin.Context) {
+
+	// create client
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+	user_id := c.Request.Header.Get("id")
+
+	// add data to document
+	fmt.Printf("header: %v\n", user_id)
+	_, err := client.Collection("User").Doc(user_id).Get(ctx)
+	if err != nil {
+		log.Printf("An error has occurred: %s", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "you can acess data",
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "you can acess data",
+		})
+	}
+}
+
 // Get all user
 func GetAllUser(c *gin.Context) {
 
