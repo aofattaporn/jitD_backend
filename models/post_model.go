@@ -9,7 +9,7 @@ import (
 type Post struct {
 	UserID   *firestore.DocumentRef   `json:"userId"`
 	Content  string                   `json:"content"`
-	Date     time.Time                `json:"ddate,omitempty"`
+	Date     time.Time                `json:"date,omitempty"`
 	IsPublic bool                     `json:"isPublic"`
 	Category []string                 `json:"category,omitempty"`
 	Comment  []*firestore.DocumentRef `json:"comment,omitempty"`

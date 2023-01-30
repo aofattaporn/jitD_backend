@@ -12,6 +12,6 @@ func PostRoutes(route *gin.Engine) {
 	v1.GET("/", controllers.GetAllPost)
 	v1.GET("/id", controllers.GetMyPost)
 	v1.DELETE("/:post_id", controllers.DeleteMyPost)
-	//v1.DELETE("/:post_id", controllers.RemoveMyPost)
+	v1.PUT("/:post_id", controllers.UpdatePost)
 
 }
