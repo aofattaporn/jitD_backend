@@ -18,6 +18,6 @@ type CommentResponse struct {
 	Comment_id   string    `json:"comment_id"`
 	Content      string    `json:"Content"`
 	CountComment int       `json:"countComment"`
-	Likec        string    `json:"like,omitempty"`
+	Like         string    `json:"like,omitempty"`
 	Date         time.Time `json:"date,omitempty"`
 }
