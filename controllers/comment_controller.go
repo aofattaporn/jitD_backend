@@ -67,8 +67,11 @@ func CreateComment(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, setData)
 
+	// func (c *Context) Param(key string) string {
+	// 	return c.Params.ByName(key)
+
 	//------Updating to User
-	// id := c.Request.Header.Get("id")
+	// id := c.Param.Byname("id")
 	// user := models.User{}
 	// dsnap, err2 := client.Collection("User").Doc(id).Get(ctx)
 	// 	if err2 != nil {
@@ -116,17 +119,6 @@ func GetAllComment(c *gin.Context) {
 		comments = append(comments, commentRes)
 	}
 	c.JSON(http.StatusOK, comments)
-
-	// iter := client.Collection("Comment").Documents(ctx)
-	// for {
-	// 	doc, err := iter.Next()
-	// 	if err != nil {
-	// 		log.Fatalln(err)
-	// 	}
-	// 	comment := models.Comment{}
-	// 	mapstructure.Decode(doc.Data(), &comment)
-	// 	comments = append(comments, comment)
-	// }
 
 }
 
