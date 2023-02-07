@@ -31,6 +31,7 @@ func CreateComment(c *gin.Context) {
 	// assigning comment object to comment model
 	comment.Content = string(comment.Content)
 	comment.Like = []*firestore.DocumentRef{}
+	comment.UserId = string(comment.UserId)
 	comment.Date.Format(time.RFC3339)
 	//currentTime := time.Now().Format(time.RFC3339)
 
@@ -45,21 +46,6 @@ func CreateComment(c *gin.Context) {
 			"message": "create comment success",
 		})
 	}
-
-	// Adding Comment data
-	// comment.Date.Format(time.RFC3339)
-	// currentTime := time.Now().Format(time.RFC3339)
-	// currentDateTime, err := time.Parse(time.RFC3339, currentTime)
-
-	// comment.Date = currentDateTime
-	// comment.Like = []*firestore.DocumentRef{}
-	// fmt.Printf("comment: %v\n", comment)
-	// commentRef, _, err := client.Collection("Comment").Add(ctx, comment)
-	// if err != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{
-	// 		"Message": "Can't to create comment",
-	// 	})
-	// }
 
 	//------- Updateing to post --------------
 
@@ -120,12 +106,12 @@ func GetAllComment(c *gin.Context) {
 	for _, element := range snap {
 		mapstructure.Decode(element.Data(), &comment)
 
-		commentRes.UserId = element.Ref.Parent.Parent.ID
+		commentRes.UserId = comment.UserId
 		commentRes.PostId = element.Ref.Parent.ID
 		commentRes.Content = comment.Content
-		commentRes.Comment_id = element.Ref.ID
+		commentRes.CommentId = element.Ref.ID
 		commentRes.Date = comment.Date
-		//commentRes.Like = len(comment.Like)
+		commentRes.CountLike = len(comment.Like)
 
 		comments = append(comments, commentRes)
 	}
@@ -360,127 +346,3 @@ func GetCommentByCommentID(c *gin.Context) {
 	mapstructure.Decode(dsnap.Data(), &comment)
 	c.JSON(http.StatusOK, comment)
 }
-
-// //New Create Comment
-// func handleComments(w http.ResponseWriter, r *http.Request) {
-// 	switch r.Method {
-// 	case "GET":
-// 		handleGetComments(w, r)
-// 	case "POST":
-// 		handleAddComment(w, r)
-// 	default:
-// 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-// 	}
-// }
-
-// func handleGetComments(w http.ResponseWriter, r *http.Request) {
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(comment)
-// }
-
-// func handleAddComment(w http.ResponseWriter, r *http.Request) {
-// 	var comment Comment
-// 	err := json.NewDecoder(r.Body).Decode(&comment)
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusBadRequest)
-// 		return
-// 	}
-// 	comments = append(comments, comment)
-// 	fmt.Fprintf(w, "Comment added successfully")
-// }
-
-// func GetAllComment(c *gin.Context) {
-
-// 	comments := []models.Comment{}
-// 	ctx := context.Background()
-// 	client := configs.CreateClient(ctx)
-
-// 	iter := client.Collection("Comment").Documents(ctx)
-// 	for {
-// 		comment := models.Comment{}
-// 		doc, err := iter.Next()
-// 		if err == iterator.Done {
-// 			break
-// 		}
-// 		if err != nil {
-// 			log.Fatal(err)
-// 			c.JSON(http.StatusNotFound, "Not found")
-// 		}
-// 		mapstructure.Decode(doc.Data(), &comment)
-// 		comments = append(comments, comment)
-// 	}
-
-// 	fmt.Println(comments)
-// 	c.JSON(http.StatusOK, comments)
-// }
-
-// func GetCommentById(c *gin.Context) {
-// 	id := c.Param("id")
-// 	comment := models.Comment{}
-// 	ctx := context.Background()
-// 	client := configs.CreateClient(ctx)
-
-// 	dsnap, err := client.Collection("Comment").Doc(id).Get(ctx)
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"message": "cant create",
-// 		})
-// 	}
-// 	mapstructure.Decode(dsnap.Data(), &comment)
-// 	c.JSON(http.StatusOK, comment)
-// }
-
-// func CreateComment(c *gin.Context) {
-// 	comment := models.Comment{}
-// 	ctx := context.Background()
-// 	client := configs.CreateClient(ctx)
-
-// 	if err := c.ShouldBindJSON(&comment); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 		return
-// 	}
-
-// 	_, _, err := client.Collection("Comment").Add(ctx, comment)
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"message": "cant create",
-// 		})
-// 	}
-// 	c.JSON(http.StatusOK, comment)
-// }
-
-// func UpdateComment(c *gin.Context) {
-// 	id := c.Param("id")
-// 	comment := models.Comment{}
-// 	ctx := context.Background()
-// 	client := configs.CreateClient(ctx)
-
-// 	if err := c.ShouldBindJSON(&comment); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 		return
-// 	}
-
-// 	_, err := client.Collection("Comment").Doc(id).Set(ctx, comment)
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"message": "cant update",
-// 		})
-// 	}
-// 	c.JSON(http.StatusOK, comment)
-// }
-
-// func DeleteComment(c *gin.Context) {
-// 	id := c.Param("id")
-// 	ctx := context.Background()
-// 	client := configs.CreateClient(ctx)
-
-// 	_, err := client.Collection("Comment").Doc(id).Delete(ctx)
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"message": "cant delete",
-// 		})
-// 	}
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"message": "deleted",
-// 	})
-// }
