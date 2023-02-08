@@ -148,8 +148,6 @@ func GetMyPost(c *gin.Context) {
 	c.JSON(http.StatusOK, postsRes)
 }
 
-// ------------- unused -------------
-
 func DeleteMyPost(c *gin.Context) {
 	post_id := c.Param("post_id")
 	user_id := c.Request.Header.Get("id")
@@ -288,4 +286,29 @@ func deletePostAndRemoveReference(ctx context.Context, fsClient *firestore.Clien
 		return nil
 	})
 	return err
+}
+
+// service get my post
+func GetPostByKeyword(c *gin.Context) {
+
+	// create object to conneect db
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
+	// mapping request body to new data
+	keyword := models.User{}.Posts
+	if errBadReq := c.BindJSON(&keyword); errBadReq != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+		return
+	}
+
+	// find document that has a keeyworrd
+	result, errSearch := client.Collection("Post").Where("Content", ">=", keyword).Limit(10).Documents(ctx).GetAll()
+	if errSearch != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+		return
+	}
+
+	// if anything is ok
+	c.JSON(http.StatusOK, result)
 }
