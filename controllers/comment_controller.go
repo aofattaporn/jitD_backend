@@ -49,17 +49,17 @@ func CreateComment(c *gin.Context) {
 
 	//------- Updateing to post --------------
 
-	id := c.Request.Header.Get("id")
+	post_id := c.Param("post_id")
 	post := models.Post{}
-	dsnap, err2 := client.Collection("Post").Doc(id).Get(ctx)
+	dsnap, err2 := client.Collection("Post").Doc(post_id).Get(ctx)
 	if err2 != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Cant to find userid",
+			"message": "Cant to find postid",
 		})
 	}
 	mapstructure.Decode(dsnap.Data(), &post)
 	post.Comment = append(post.Comment, commentRef)
-	setData, _ := client.Collection("Post").Doc(id).Set(ctx, post)
+	setData, _ := client.Collection("Post").Doc(post_id).Set(ctx, post)
 	if err2 != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Cant to find postid",
@@ -67,28 +67,25 @@ func CreateComment(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, setData)
 
-	// func (c *Context) Param(key string) string {
-	// 	return c.Params.ByName(key)
+	//------- Updateing to User --------------
 
-	//------Updating to User
-	// id := c.Param.Byname("id")
-	// user := models.User{}
-	// dsnap, err2 := client.Collection("User").Doc(id).Get(ctx)
-	// 	if err2 != nil {
-	// 		c.JSON(http.StatusBadRequest, gin.H{
-	// 		"message": "Cant to find userid",
-	// 	})
-	// }
-	// mapstructure.Decode(dsnap.Data(), &user)
-	// user.Comment = append(user.Comment, commentRef)
-	// setData, _ := client.Collection("User").Doc(id).Set(ctx, user)
-	// if err2 != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{
-	// 		"message": "Cant to find userid",
-	// 	})
-	// }
-	// 		//----------- return data ---------------
-	// 		c.JSON(http.StatusOK, setData)
+	user_id := c.Request.Header.Get("id")
+	user := models.User{}
+	dataUser, err2 := client.Collection("User").Doc(user_id).Get(ctx)
+	if err2 != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Cant to find userid",
+		})
+	}
+	mapstructure.Decode(dataUser.Data(), &user)
+	user.Comments = append(user.Comments, commentRef)
+	setDataUser, _ := client.Collection("User").Doc(user_id).Set(ctx, user)
+	if err2 != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Cant to find postid",
+		})
+	}
+	c.JSON(http.StatusOK, setDataUser)
 
 }
 
@@ -136,23 +133,6 @@ func GetMyComment(c *gin.Context) {
 	mapstructure.Decode(dsnap.Data(), &comment)
 	c.JSON(http.StatusOK, comment)
 }
-
-// ---------- another way to get comment -------------
-
-// func GetComment(c *gin.Context) {
-// 	ctx := context.Background()
-// 	client := configs.CreateClient(ctx)
-// 	comment := models.Comment{}
-// 	id := c.Request.Header.Get("id")
-// 	dsnap, err := client.Collection("Comment").Doc(id).Get(ctx)
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"message": "Cant to find commentid",
-// 		})
-// 	}
-// 	mapstructure.Decode(dsnap.Data(), &comment)
-// 	c.JSON(http.StatusOK, comment)
-// }
 
 func DeleteComment(c *gin.Context) {
 	ctx := context.Background()
