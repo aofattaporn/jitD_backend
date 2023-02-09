@@ -161,20 +161,33 @@ func GetMyComment(c *gin.Context) {
 }
 
 func GetCommentByPostID(c *gin.Context) {
-	ctx := context.Background()
-	client := configs.CreateClient(ctx)
+
+	print("GetCommentByPostID")
+
 	post_id := c.Param("post_id")
 	post := models.Post{}
+	postRes := models.PostResponse{}
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
 	// comment := models.Comment{}
 	// id := c.Request.Header.Get("id")
 	dsnap, err := client.Collection("Post").Doc(post_id).Get(ctx)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Cant to find commentid",
+			"message": "Cant to find comment",
 		})
 	}
-	mapstructure.Decode(dsnap.Data(), &post)
-	c.JSON(http.StatusOK, post.Comment)
+
+	postRes.PostId = dsnap.Ref.ID
+	postRes.UserId = dsnap.Ref.Parent.ID
+	postRes.Content = post.Content
+	postRes.Date = post.Date
+	postRes.CountLike = len(post.Like)
+	postRes.CountComment = len(post.Comment)
+
+	mapstructure.Decode(dsnap.Data(), &postRes)
+	c.JSON(http.StatusOK, postRes)
 }
 
 // ยากแล้ว
