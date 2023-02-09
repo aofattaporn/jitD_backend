@@ -59,13 +59,13 @@ func CreateComment(c *gin.Context) {
 	}
 	mapstructure.Decode(dsnap.Data(), &post)
 	post.Comment = append(post.Comment, commentRef)
-	setData, _ := client.Collection("Post").Doc(post_id).Set(ctx, post)
-	if err2 != nil {
+	_, err3 := client.Collection("Post").Doc(post_id).Set(ctx, post)
+	if err3 != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Cant to find postid",
 		})
 	}
-	c.JSON(http.StatusOK, setData)
+	//c.JSON(http.StatusOK, _)
 
 	//------- Updateing to User --------------
 
@@ -122,18 +122,62 @@ func GetAllComment(c *gin.Context) {
 func GetMyComment(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
-	comment := models.Comment{}
+	user := models.User{}
 	id := c.Request.Header.Get("id")
-	dsnap, err := client.Collection("Comment").Doc(id).Get(ctx)
+	dsnap, err := client.Collection("User").Doc(id).Get(ctx)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Cant to find commentid",
 		})
 	}
-	mapstructure.Decode(dsnap.Data(), &comment)
+
+	commentResf := user.Comments
+	commentRes := models.CommentResponse{}
+	comment := models.Comment{}
+	commentsRes := []models.CommentResponse{}
+
+	commentData, typeerr := dsnap.DataAt("Comments")
+	if typeerr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Cant to find commentid",
+		})
+	}
+	mapstructure.Decode(commentData, &commentResf)
+
+	X, _ := client.GetAll(ctx, commentResf)
+	for _, element := range X {
+		mapstructure.Decode(element.Data(), &comment)
+		mapstructure.Decode(comment, &commentRes)
+		commentRes.UserId = comment.UserId
+		commentRes.PostId = element.Ref.Parent.ID
+		commentRes.Content = comment.Content
+		commentRes.CommentId = element.Ref.ID
+		commentRes.Date = comment.Date
+		commentRes.CountLike = len(comment.Like)
+		commentsRes = append(commentsRes, commentRes)
+	}
+
 	c.JSON(http.StatusOK, comment)
 }
 
+func GetCommentByPostID(c *gin.Context) {
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+	post_id := c.Param("post_id")
+	post := models.Post{}
+	// comment := models.Comment{}
+	// id := c.Request.Header.Get("id")
+	dsnap, err := client.Collection("Post").Doc(post_id).Get(ctx)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Cant to find commentid",
+		})
+	}
+	mapstructure.Decode(dsnap.Data(), &post)
+	c.JSON(http.StatusOK, post.Comment)
+}
+
+// ยากแล้ว
 func DeleteComment(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
@@ -212,21 +256,6 @@ func DislikeComment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Dislike comment successfully",
 	})
-}
-
-func GetCommentByPostID(c *gin.Context) {
-	ctx := context.Background()
-	client := configs.CreateClient(ctx)
-	comment := models.Comment{}
-	id := c.Request.Header.Get("id")
-	dsnap, err := client.Collection("Comment").Doc(id).Get(ctx)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Cant to find commentid",
-		})
-	}
-	mapstructure.Decode(dsnap.Data(), &comment)
-	c.JSON(http.StatusOK, comment)
 }
 
 func GetCommentByUserID(c *gin.Context) {
