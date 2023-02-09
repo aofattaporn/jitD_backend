@@ -190,7 +190,6 @@ func GetCommentByPostID(c *gin.Context) {
 	c.JSON(http.StatusOK, postRes)
 }
 
-// ยากแล้ว
 func DeleteComment(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
@@ -205,6 +204,8 @@ func DeleteComment(c *gin.Context) {
 		"message": "Delete comment successfully",
 	})
 }
+
+//ยากชิบหายเลยยยย อัพเดพเนี่ย
 
 func UpdateComment(c *gin.Context) {
 	ctx := context.Background()
