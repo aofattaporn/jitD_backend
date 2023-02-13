@@ -94,6 +94,7 @@ func CreateComment(c *gin.Context) {
 	})
 }
 
+// service All Comment
 func GetAllComment(c *gin.Context) {
 
 	// initail data
@@ -129,22 +130,24 @@ func GetAllComment(c *gin.Context) {
 
 }
 
+// service Comment Comment
 func GetMyComment(c *gin.Context) {
+	user := models.User{}
+	commentResf := user.Comments
+	commentRes := models.CommentResponse{}
+	comment := models.Comment{}
+	commentsRes := []models.CommentResponse{}
+	id := c.Request.Header.Get("id")
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
-	user := models.User{}
-	id := c.Request.Header.Get("id")
+
 	dsnap, err := client.Collection("User").Doc(id).Get(ctx)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Cant to find commentid",
 		})
+		return
 	}
-
-	commentResf := user.Comments
-	commentRes := models.CommentResponse{}
-	comment := models.Comment{}
-	commentsRes := []models.CommentResponse{}
 
 	commentData, typeerr := dsnap.DataAt("Comments")
 	if typeerr != nil {
@@ -170,6 +173,7 @@ func GetMyComment(c *gin.Context) {
 	c.JSON(http.StatusOK, comment)
 }
 
+// service Comment by Post id
 func GetCommentByPostID(c *gin.Context) {
 
 	print("GetCommentByPostID")
