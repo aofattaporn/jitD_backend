@@ -17,99 +17,109 @@ import (
 
 // service Create Comment
 func CreateComment(c *gin.Context) {
+
+	// declare a variable
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
+	user_id := c.Request.Header.Get("id")
+	post_id := c.Param("post_id")
 	comment := models.Comment{}
-
+	post := models.Post{}
+	user := models.User{}
 	if err := c.BindJSON(&comment); err != nil {
 		log.Fatalln(err)
 		return
-
 	}
-	fmt.Println("time.Now().UTC(): ", time.Now().Format(time.RFC3339))
 
 	// assigning comment object to comment model
 	comment.Content = string(comment.Content)
+	comment.UserId = string(user_id)
+	comment.PostId = string(post_id)
 	comment.Like = []*firestore.DocumentRef{}
-	comment.UserId = string(comment.UserId)
-	comment.Date.Format(time.RFC3339)
-	//currentTime := time.Now().Format(time.RFC3339)
+	comment.Date = time.Now().UTC()
 
-	//add comment to comment collection
-	commentRef, _, err := client.Collection("Comment").Add(ctx, comment)
+	// get post id
+	postRef := client.Collection("Post").Doc(post_id)
+	dsnap, err2 := postRef.Get(ctx)
+	if err2 != nil {
+		log.Println(err2)
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error finding post"})
+		return
+	}
+	mapstructure.Decode(dsnap.Data(), &post)
+
+	// get user id
+	userRef := client.Collection("User").Doc(user_id)
+	dsnap2, err3 := userRef.Get(ctx)
+	if err3 != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Error finding post"})
+		return
+	}
+	mapstructure.Decode(dsnap2.Data(), &user)
+
+	// start the transaction
+	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+
+		// add document [ commnt colleection ]
+		commentRef, _, err := client.Collection("Comment").Add(ctx, comment)
+		if err != nil {
+			return err
+		}
+
+		// update field comment [ post collection ]
+		post.Comment = append(post.Comment, commentRef)
+		_, err = postRef.Set(ctx, post)
+		if err != nil {
+			return err
+		}
+
+		// update field comment [ user collection ]
+		user.Comments = append(user.Comments, commentRef)
+		_, err = userRef.Set(ctx, post)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 	if err != nil {
+		fmt.Print(err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Cant to create comment",
 		})
-	} else {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "create comment success",
-		})
+		return
 	}
-
-	//------- Updateing to post --------------
-
-	post_id := c.Param("post_id")
-	post := models.Post{}
-	dsnap, err2 := client.Collection("Post").Doc(post_id).Get(ctx)
-	if err2 != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Cant to find postid",
-		})
-	}
-	mapstructure.Decode(dsnap.Data(), &post)
-	post.Comment = append(post.Comment, commentRef)
-	_, err3 := client.Collection("Post").Doc(post_id).Set(ctx, post)
-	if err3 != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Cant to find postid",
-		})
-	}
-	//c.JSON(http.StatusOK, _)
-
-	//------- Updateing to User --------------
-
-	user_id := c.Request.Header.Get("id")
-	user := models.User{}
-	dataUser, err2 := client.Collection("User").Doc(user_id).Get(ctx)
-	if err2 != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Cant to find userid",
-		})
-	}
-	mapstructure.Decode(dataUser.Data(), &user)
-	user.Comments = append(user.Comments, commentRef)
-	setDataUser, _ := client.Collection("User").Doc(user_id).Set(ctx, user)
-	if err2 != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Cant to find postid",
-		})
-	}
-	c.JSON(http.StatusOK, setDataUser)
-
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Comment created successfully",
+	})
 }
 
 func GetAllComment(c *gin.Context) {
 
+	// initail data
 	comments := []models.CommentResponse{}
 	commentRes := models.CommentResponse{}
 	comment := models.Comment{}
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
+	// get all comment [ comment collection ]
 	snap, err := client.Collection("Comment").Documents(ctx).GetAll()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Cant to find commentid",
 		})
+		return
 	}
+
+	// mapping data to commentRes
 	for _, element := range snap {
 		mapstructure.Decode(element.Data(), &comment)
 
 		commentRes.UserId = comment.UserId
-		commentRes.PostId = element.Ref.Parent.ID
+		commentRes.PostId = comment.PostId
 		commentRes.Content = comment.Content
-		commentRes.CommentId = element.Ref.ID
+		commentRes.CommentId = comment.UserId
 		commentRes.Date = comment.Date
 		commentRes.CountLike = len(comment.Like)
 
@@ -225,67 +235,67 @@ func UpdateComment(c *gin.Context) {
 	})
 }
 
-func UpdateCommentByAof(c *gin.Context) {
+// func UpdateCommentByAof(c *gin.Context) {
 
-	comment_id := c.Param("comment_id")
-	ctx := context.Background()
-	client := configs.CreateClient(ctx)
+// 	comment_id := c.Param("comment_id")
+// 	ctx := context.Background()
+// 	client := configs.CreateClient(ctx)
 
-	fmt.Printf("time.Now().UTC():%v\n", time.Now().Format(time.RFC3339))
+// 	fmt.Printf("time.Now().UTC():%v\n", time.Now().Format(time.RFC3339))
 
-	currentTime := time.Now().Format(time.RFC3339)
-	currentDateTime, err := time.Parse(time.RFC3339, currentTime)
+// 	currentTime := time.Now().Format(time.RFC3339)
+// 	currentDateTime, err := time.Parse(time.RFC3339, currentTime)
 
-	commentDoc, err := client.Collection("Comment").Doc(comment_id).Get(c.Request.Context())
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"message": "Cant to find commentid"})
-		return
-	}
+// 	commentDoc, err := client.Collection("Comment").Doc(comment_id).Get(c.Request.Context())
+// 	if err != nil {
+// 		c.JSON(http.StatusNotFound, gin.H{
+// 			"message": "Cant to find commentid"})
+// 		return
+// 	}
 
-	var comment models.Comment
-	if err := commentDoc.DataTo(&comment); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"Cant to find commentid": err.Error()})
-		return
+// 	var comment models.Comment
+// 	if err := commentDoc.DataTo(&comment); err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{
+// 			"Cant to find commentid": err.Error()})
+// 		return
 
-	}
+// 	}
 
-	var updatedComment models.Comment
-	if err := c.ShouldBindJSON(&updatedComment); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
+// 	var updatedComment models.Comment
+// 	if err := c.ShouldBindJSON(&updatedComment); err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{
+// 			"error": err.Error(),
+// 		})
+// 		return
+// 	}
 
-	if updatedComment.Content != "" {
-		comment.Content = updatedComment.Content
-	}
+// 	if updatedComment.Content != "" {
+// 		comment.Content = updatedComment.Content
+// 	}
 
-	if !updatedComment.Date.IsZero() {
-		comment.Date = updatedComment.Date
-	}
+// 	if !updatedComment.Date.IsZero() {
+// 		comment.Date = updatedComment.Date
+// 	}
 
-	comment.IsPublic = updatedComment.IsPublic
-	comment.Date = currentDateTime
-	comment.Like = updatedComment.Like
-	if len(comment.Like) == 0 {
-		comment.Like = []*firestore.DocumentRef{}
-	}
+// 	comment.IsPublic = updatedComment.IsPublic
+// 	comment.Date = currentDateTime
+// 	comment.Like = updatedComment.Like
+// 	if len(comment.Like) == 0 {
+// 		comment.Like = []*firestore.DocumentRef{}
+// 	}
 
-	if _, err := client.Collection("Comment").Doc(comment_id).Set(c.Request.Context(), comment); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Cant to find commentid",
-		})
-		return
-	}
+// 	if _, err := client.Collection("Comment").Doc(comment_id).Set(c.Request.Context(), comment); err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{
+// 			"message": "Cant to find commentid",
+// 		})
+// 		return
+// 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Update comment successfully",
-	})
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"message": "Update comment successfully",
+// 	})
 
-}
+// }
 
 func LikeComment(c *gin.Context) {
 	ctx := context.Background()
