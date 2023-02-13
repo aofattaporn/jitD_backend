@@ -31,13 +31,6 @@ func CreateComment(c *gin.Context) {
 		return
 	}
 
-	// assigning comment object to comment model
-	comment.Content = string(comment.Content)
-	comment.UserId = string(user_id)
-	comment.PostId = string(post_id)
-	comment.Like = []*firestore.DocumentRef{}
-	comment.Date = time.Now().UTC()
-
 	// get post id
 	postRef := client.Collection("Post").Doc(post_id)
 	dsnap, err2 := postRef.Get(ctx)
@@ -57,6 +50,13 @@ func CreateComment(c *gin.Context) {
 	}
 	mapstructure.Decode(dsnap2.Data(), &user)
 
+	// assigning comment object to comment model
+	comment.Content = string(comment.Content)
+	comment.UserId = userRef
+	comment.PostId = postRef
+	comment.Like = []*firestore.DocumentRef{}
+	comment.Date = time.Now().UTC()
+
 	// start the transaction
 	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
 
@@ -75,7 +75,7 @@ func CreateComment(c *gin.Context) {
 
 		// update field comment [ user collection ]
 		user.Comments = append(user.Comments, commentRef)
-		_, err = userRef.Set(ctx, post)
+		_, err = userRef.Set(ctx, user)
 		if err != nil {
 			return err
 		}
@@ -117,10 +117,10 @@ func GetAllComment(c *gin.Context) {
 	for _, element := range snap {
 		mapstructure.Decode(element.Data(), &comment)
 
-		commentRes.UserId = comment.UserId
-		commentRes.PostId = comment.PostId
+		commentRes.UserId = comment.UserId.ID
+		commentRes.PostId = element.Ref.ID
 		commentRes.Content = comment.Content
-		commentRes.CommentId = comment.UserId
+		commentRes.CommentId = comment.UserId.ID
 		commentRes.Date = comment.Date
 		commentRes.CountLike = len(comment.Like)
 
@@ -161,7 +161,7 @@ func GetMyComment(c *gin.Context) {
 	for _, element := range X {
 		mapstructure.Decode(element.Data(), &comment)
 		mapstructure.Decode(comment, &commentRes)
-		commentRes.UserId = comment.UserId
+		commentRes.UserId = comment.UserId.ID
 		commentRes.PostId = element.Ref.Parent.ID
 		commentRes.Content = comment.Content
 		commentRes.CommentId = element.Ref.ID

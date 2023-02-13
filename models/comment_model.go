@@ -8,8 +8,8 @@ import (
 
 type Comment struct {
 	Content string                   `json:"content"`
-	UserId  string                   `json:"userId"`
-	PostId  string                   `json:"postId"`
+	UserId  *firestore.DocumentRef   `json:"userId"`
+	PostId  *firestore.DocumentRef   `json:"postId"`
 	Like    []*firestore.DocumentRef `json:"like,omitempty"`
 	Date    time.Time                `json:"date,omitempty"`
 }
