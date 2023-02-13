@@ -28,6 +28,7 @@ func main() {
 	routes.UserRoute(router)
 	// routes.CommentRoutes(router)
 	routes.PostRoutes(router)
+	routes.CommentRoutes(router)
 
 	// checking token
 	// routes.PostRoutes(router)
