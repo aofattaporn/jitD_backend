@@ -205,13 +205,14 @@ func DeleteComment(c *gin.Context) {
 	})
 }
 
-//ยากชิบหายเลยยยย อัพเดพเนี่ย
-
+// ยากชิบหายเลยยยย อัพเดพเนี่ย
 func UpdateComment(c *gin.Context) {
+
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 	id := c.Request.Header.Get("id")
 	comment := models.Comment{}
+
 	c.BindJSON(&comment)
 	_, err := client.Collection("Comment").Doc(id).Set(ctx, comment)
 	if err != nil {
@@ -222,6 +223,68 @@ func UpdateComment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Update comment successfully",
 	})
+}
+
+func UpdateCommentByAof(c *gin.Context) {
+
+	comment_id := c.Param("comment_id")
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
+	fmt.Printf("time.Now().UTC():%v\n", time.Now().Format(time.RFC3339))
+
+	currentTime := time.Now().Format(time.RFC3339)
+	currentDateTime, err := time.Parse(time.RFC3339, currentTime)
+
+	commentDoc, err := client.Collection("Comment").Doc(comment_id).Get(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "Cant to find commentid"})
+		return
+	}
+
+	var comment models.Comment
+	if err := commentDoc.DataTo(&comment); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"Cant to find commentid": err.Error()})
+		return
+
+	}
+
+	var updatedComment models.Comment
+	if err := c.ShouldBindJSON(&updatedComment); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	if updatedComment.Content != "" {
+		comment.Content = updatedComment.Content
+	}
+
+	if !updatedComment.Date.IsZero() {
+		comment.Date = updatedComment.Date
+	}
+
+	comment.IsPublic = updatedComment.IsPublic
+	comment.Date = currentDateTime
+	comment.Like = updatedComment.Like
+	if len(comment.Like) == 0 {
+		comment.Like = []*firestore.DocumentRef{}
+	}
+
+	if _, err := client.Collection("Comment").Doc(comment_id).Set(c.Request.Context(), comment); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Cant to find commentid",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Update comment successfully",
+	})
+
 }
 
 func LikeComment(c *gin.Context) {

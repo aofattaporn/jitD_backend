@@ -20,4 +20,5 @@ type CommentResponse struct {
 	Content   string    `json:"Content"`
 	CountLike int       `json:"countLike"`
 	Date      time.Time `json:"date,omitempty"`
+	IsPublic  bool      `json:"isPublic"`
 }
