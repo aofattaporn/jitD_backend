@@ -266,6 +266,8 @@ func DeleteComment(c *gin.Context) {
 
 }
 
+// ------------ service not use in froneend --------------
+
 // service All Comment
 func GetAllComment(c *gin.Context) {
 
