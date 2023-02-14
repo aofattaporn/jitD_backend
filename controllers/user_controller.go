@@ -82,7 +82,6 @@ func GetAllUser(c *gin.Context) {
 
 	users := []models.UserResponse{}
 	userRes := models.UserResponse{}
-	user := models.User{}
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
@@ -97,9 +96,8 @@ func GetAllUser(c *gin.Context) {
 	// maping data to user model
 	for _, element := range snap {
 		/// mapdata and count list
+		user := models.User{}
 		mapstructure.Decode(element.Data(), &user)
-
-		// user.Likes = len(user.Likes)
 		userRes.UserId = element.Ref.ID
 		userRes.PetName = user.PetName
 		userRes.Point = user.Point
