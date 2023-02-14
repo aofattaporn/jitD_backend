@@ -11,6 +11,7 @@ func UserRoute(route *gin.Engine) {
 	v1.GET("/", controllers.GetAllUser)
 	v1.POST("/", controllers.CreateUser)
 	v1.POST("/signIn", controllers.SignIn)
+	v1.POST("/signIn/google", controllers.SignInGoogle)
 	v1.GET("/id", controllers.GetUserById)
 	v1.PUT("/pet/id", controllers.NamingPet)
 

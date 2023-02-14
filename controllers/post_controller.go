@@ -20,8 +20,9 @@ func CreatePost(c *gin.Context) {
 
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
+	user := models.User{}
 	post := models.Post{}
-	id := c.Request.Header.Get("id")
+	user_id := c.Request.Header.Get("id")
 
 	// Call BindJSON to bind the received JSON body
 	if err := c.BindJSON(&post); err != nil {
@@ -29,44 +30,47 @@ func CreatePost(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("time.Now().UTC(): %v\n", time.Now().Format(time.RFC3339))
-
-	//----------- adding post data to Posts ---------------
-	post.Date.Format(time.RFC3339)
-	currentTime := time.Now().Format(time.RFC3339)
-	currentDateTime, err := time.Parse(time.RFC3339, currentTime)
-
-	dsnap, err2 := client.Collection("User").Doc(id).Get(ctx)
-	if err2 != nil {
+	// get userRef
+	userRef, user_err := client.Collection("User").Doc(user_id).Get(ctx)
+	if user_err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Cant to find userid",
 		})
+		return
 	}
-	post.UserID = dsnap.Ref
-	post.Date = currentDateTime
-	post.Comment = []*firestore.DocumentRef{}
-	post.Like = []*firestore.DocumentRef{}
-	fmt.Printf("post: %v\n", post)
-	postRef, _, err := client.Collection("Post").Add(ctx, post)
+	mapstructure.Decode(userRef.Data(), &user)
+
+	//----------- adding post data to Posts ---------------
+	post.Date = time.Now().UTC()
+
+	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		post.UserID = userRef.Ref
+		post.Date = time.Now().UTC()
+		post.Comment = []*firestore.DocumentRef{}
+		post.Like = []*firestore.DocumentRef{}
+		postRef, _, post_err := client.Collection("Post").Add(ctx, post)
+		if post_err != nil {
+			return post_err
+		}
+
+		// update post feild [ useer collection ]
+		user.Posts = append(user.Posts, postRef)
+		_, user_err_update := client.Collection("User").Doc(user_id).Set(ctx, user)
+		if user_err_update != nil {
+			return user_err_update
+		}
+		return nil
+	})
 	if err != nil {
+		fmt.Print(err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Cant to create post",
 		})
+		return
 	}
-
-	//----------- updating to user ---------------
-	user := models.User{}
-	mapstructure.Decode(dsnap.Data(), &user)
-	user.Posts = append(user.Posts, postRef)
-	setData, _ := client.Collection("User").Doc(id).Set(ctx, user)
-	if err2 != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Cant to find userid",
-		})
-	}
-
-	//----------- return data ---------------
-	c.JSON(http.StatusOK, setData)
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Post created successfully",
+	})
 }
 
 // service get all post
@@ -220,8 +224,6 @@ func UpdatePost(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Post updated successfully"})
 }
-
-// ---------------------------- hander function ----------------------------
 
 func deletePostAndRemoveReference(ctx context.Context, fsClient *firestore.Client, postID, userID string) error {
 	err := fsClient.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {

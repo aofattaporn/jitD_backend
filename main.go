@@ -18,19 +18,11 @@ func main() {
 	router := gin.Default()
 
 	// use middleware
-	// router.Use(gin.Logger())
-	// router.Use(gin.Recovery())
-
-	// provide route
-	routes.BookRoutes(router)
-
 	router.Use(configs.Verify)
-	routes.UserRoute(router)
-	// routes.CommentRoutes(router)
-	routes.PostRoutes(router)
 
-	// checking token
-	// routes.PostRoutes(router)
+	routes.UserRoute(router)
+	routes.PostRoutes(router)
+	routes.CommentRoutes(router)
 
 	// configue on port 3000
 	router.Run("0.0.0.0:3000")
