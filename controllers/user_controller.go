@@ -11,6 +11,8 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 	mapstructure "github.com/mitchellh/mapstructure"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // Create a User
@@ -74,6 +76,48 @@ func SignIn(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "you can acess data",
 		})
+	}
+}
+
+// Create a User
+func SignInGoogle(c *gin.Context) {
+
+	// create client
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+	user_id := c.Request.Header.Get("id")
+	user := models.User{}
+	user.Point = 0
+	user.Posts = []*firestore.DocumentRef{}
+	user.Comments = []*firestore.DocumentRef{}
+	user.Likes = []*firestore.DocumentRef{}
+
+	_, user_err := client.Collection("User").Doc(user_id).Get(ctx)
+	if user_err != nil {
+		if status.Code(user_err) == codes.NotFound {
+			_, err := client.Collection("User").Doc(user_id).Set(ctx, user)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"message": "Cant to set data",
+				})
+				return
+			} else {
+				c.JSON(http.StatusCreated, gin.H{
+					"message": "something wronng",
+				})
+				return
+			}
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "something wronng",
+			})
+			return
+		}
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Data found",
+		})
+		return
 	}
 }
 
