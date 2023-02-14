@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	"google.golang.org/api/iterator"
 
 	"github.com/gin-gonic/gin"
 	mapstructure "github.com/mitchellh/mapstructure"
@@ -82,7 +83,7 @@ func GetAllPost(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
-	snap, err := client.Collection("Post").Documents(ctx).GetAll()
+	snap, err := client.Collection("Post").Limit(10).Documents(ctx).GetAll()
 	if err != nil {
 		return
 	}
@@ -292,25 +293,49 @@ func deletePostAndRemoveReference(ctx context.Context, fsClient *firestore.Clien
 
 // service get my post
 func GetPostByKeyword(c *gin.Context) {
-
-	// create object to conneect db
+	// create a context
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
-	// mapping request body to new data
-	keyword := models.User{}.Posts
+	// bind the keyword from the request body
+	keyword := models.Post{}
 	if errBadReq := c.BindJSON(&keyword); errBadReq != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
 		return
 	}
 
-	// find document that has a keeyworrd
-	result, errSearch := client.Collection("Post").Where("Content", ">=", keyword).Limit(10).Documents(ctx).GetAll()
-	if errSearch != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
-		return
+	// find documents that contain the keyword
+	query := client.Collection("Post").Where("Content", ">=", keyword.Content).Limit(10)
+	iter := query.Documents(ctx)
+	defer iter.Stop()
+
+	postRes := models.PostResponse{}
+	postsRes := []models.PostResponse{}
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+			return
+		}
+
+		post := models.Post{}
+		mapstructure.Decode(doc.Data(), &post)
+		mapstructure.Decode(post, &postRes)
+
+		postRes.UserId = post.UserID.ID
+		postRes.PostId = doc.Ref.ID
+		postRes.CountLike = len(post.Like)
+		postRes.CountComment = len(post.Comment)
+		postRes.Category = post.Category
+		postRes.Date = post.Date
+
+		postsRes = append(postsRes, postRes)
+
 	}
 
-	// if anything is ok
-	c.JSON(http.StatusOK, result)
+	// return the results
+	c.JSON(http.StatusOK, postsRes)
 }
