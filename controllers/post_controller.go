@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	"google.golang.org/api/iterator"
 
 	"github.com/gin-gonic/gin"
 	mapstructure "github.com/mitchellh/mapstructure"
@@ -82,14 +83,13 @@ func GetAllPost(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
-	snap, err := client.Collection("Post").Documents(ctx).GetAll()
+	snap, err := client.Collection("Post").Limit(10).Documents(ctx).GetAll()
 	if err != nil {
 		return
 	}
 
 	for _, element := range snap {
-		// fmt.Println(element.Data())
-		// id := c.Request.Header.Get("id")
+
 		post := models.Post{}
 		mapstructure.Decode(element.Data(), &post)
 		mapstructure.Decode(post, &postRes)
@@ -102,7 +102,6 @@ func GetAllPost(c *gin.Context) {
 		postRes.Date = post.Date
 
 		posts = append(posts, postRes)
-		// fmt.Printf("post: %v\n", post)
 	}
 	c.JSON(http.StatusOK, posts)
 }
@@ -151,8 +150,6 @@ func GetMyPost(c *gin.Context) {
 
 	c.JSON(http.StatusOK, postsRes)
 }
-
-// ------------- unused -------------
 
 func DeleteMyPost(c *gin.Context) {
 	post_id := c.Param("post_id")
@@ -290,4 +287,76 @@ func deletePostAndRemoveReference(ctx context.Context, fsClient *firestore.Clien
 		return nil
 	})
 	return err
+}
+
+// service get my post
+func GetPostByKeyword(c *gin.Context) {
+	// create a context
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+	user_id := c.Request.Header.Get("id")
+	user := models.User{}
+
+	// bind the keyword from the request body
+	keyword := models.Post{}
+	if errBadReq := c.BindJSON(&keyword); errBadReq != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+		return
+	}
+
+	// adding in history
+	userDoc, _ := client.Collection("User").Doc(user_id).Get(ctx)
+	mapstructure.Decode(userDoc.Data(), &user)
+	user.HistorySearch = append(user.HistorySearch, keyword.Content)
+
+	// Reverse the search history list
+	for i, j := 0, len(user.HistorySearch)-1; i < j; i, j = i+1, j-1 {
+		user.HistorySearch[i], user.HistorySearch[j] = user.HistorySearch[j], user.HistorySearch[i]
+	}
+
+	// Limit the search history list to the last 5 elements
+	if len(user.HistorySearch) > 5 {
+		user.HistorySearch = user.HistorySearch[:5]
+	}
+
+	// Save the updated user data
+	if _, err := client.Collection("User").Doc(user_id).Set(ctx, user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+		return
+	}
+
+	// find documents that contain the keyword
+	query := client.Collection("Post").Where("Content", ">=", keyword.Content).Limit(10)
+	iter := query.Documents(ctx)
+	defer iter.Stop()
+
+	postRes := models.PostResponse{}
+	postsRes := []models.PostResponse{}
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+			return
+		}
+
+		post := models.Post{}
+		mapstructure.Decode(doc.Data(), &post)
+		mapstructure.Decode(post, &postRes)
+
+		postRes.UserId = post.UserID.ID
+		postRes.PostId = doc.Ref.ID
+		postRes.CountLike = len(post.Like)
+		postRes.CountComment = len(post.Comment)
+		postRes.Category = post.Category
+		postRes.Date = post.Date
+
+		postsRes = append(postsRes, postRes)
+
+	}
+
+	// return the results
+	c.JSON(http.StatusOK, postsRes)
 }
