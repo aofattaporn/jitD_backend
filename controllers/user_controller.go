@@ -224,8 +224,6 @@ func NamingPet(c *gin.Context) {
 	}
 }
 
-// ------------- unused -------------
-
 // Delete User
 func DeleteUser(c *gin.Context) {
 

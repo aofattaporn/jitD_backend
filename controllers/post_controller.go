@@ -89,8 +89,7 @@ func GetAllPost(c *gin.Context) {
 	}
 
 	for _, element := range snap {
-		// fmt.Println(element.Data())
-		// id := c.Request.Header.Get("id")
+
 		post := models.Post{}
 		mapstructure.Decode(element.Data(), &post)
 		mapstructure.Decode(post, &postRes)
@@ -103,7 +102,6 @@ func GetAllPost(c *gin.Context) {
 		postRes.Date = post.Date
 
 		posts = append(posts, postRes)
-		// fmt.Printf("post: %v\n", post)
 	}
 	c.JSON(http.StatusOK, posts)
 }
@@ -296,10 +294,33 @@ func GetPostByKeyword(c *gin.Context) {
 	// create a context
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
+	user_id := c.Request.Header.Get("id")
+	user := models.User{}
 
 	// bind the keyword from the request body
 	keyword := models.Post{}
 	if errBadReq := c.BindJSON(&keyword); errBadReq != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+		return
+	}
+
+	// adding in history
+	userDoc, _ := client.Collection("User").Doc(user_id).Get(ctx)
+	mapstructure.Decode(userDoc.Data(), &user)
+	user.HistorySearch = append(user.HistorySearch, keyword.Content)
+
+	// Reverse the search history list
+	for i, j := 0, len(user.HistorySearch)-1; i < j; i, j = i+1, j-1 {
+		user.HistorySearch[i], user.HistorySearch[j] = user.HistorySearch[j], user.HistorySearch[i]
+	}
+
+	// Limit the search history list to the last 5 elements
+	if len(user.HistorySearch) > 5 {
+		user.HistorySearch = user.HistorySearch[:5]
+	}
+
+	// Save the updated user data
+	if _, err := client.Collection("User").Doc(user_id).Set(ctx, user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
 		return
 	}

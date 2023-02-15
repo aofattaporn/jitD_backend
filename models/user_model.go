@@ -5,8 +5,9 @@ import (
 )
 
 type User struct {
-	PetName string `json:"petName"`
-	Point   int    `json:"point"`
+	PetName       string   `json:"petName"`
+	Point         int      `json:"point"`
+	HistorySearch []string `json:"historySearch"`
 
 	// Reference collection
 	Posts    []*firestore.DocumentRef `json:"posts,omitempty"`
