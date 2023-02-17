@@ -190,7 +190,7 @@ func GetUserById(c *gin.Context) {
 	// not have to initial
 	//
 
-	InitializeDailyQuests(id, docref, ctx)
+	// InitializeDailyQuests(id, docref, ctx)
 	c.JSON(http.StatusOK, userRes)
 
 }
