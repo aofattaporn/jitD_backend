@@ -166,7 +166,8 @@ func GetUserById(c *gin.Context) {
 	client := configs.CreateClient(ctx)
 
 	// retrieve user by id
-	dsnap, err := client.Collection("User").Doc(id).Get(ctx)
+	docref := client.Collection("User").Doc(id)
+	dsnap, err := docref.Get(ctx)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "cant get infomation",
@@ -182,7 +183,51 @@ func GetUserById(c *gin.Context) {
 
 	// maping data to user model
 	mapstructure.Decode(dsnap.Data(), &userRes)
+
+	// check quest in user
+	// if have to map
+	//
+	// not have to initial
+	//
+
+	// InitializeDailyQuests(id, docref, ctx)
 	c.JSON(http.StatusOK, userRes)
+
+}
+
+func InitializeDailyQuests(userID string, userRef *firestore.DocumentRef, ctx context.Context) error {
+
+	// Get the user's daily quest document
+	dailyQuestRef := userRef.Collection("dailyQuest").Doc("today")
+	dailyQuestDoc, err := dailyQuestRef.Get(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get daily quest document: %v", err)
+	}
+
+	// If the daily quest document doesn't exist, create it
+	if !dailyQuestDoc.Exists() {
+		_, err := dailyQuestRef.Set(ctx, map[string]interface{}{
+			"quest1": map[string]interface{}{
+				"progress1": 0,
+				"progress2": 0,
+				"progress3": 0,
+			},
+			"quest2": map[string]interface{}{
+				"progress1": 0,
+				"progress2": 0,
+				"progress3": 0,
+			},
+			"quest3": map[string]interface{}{
+				"progress1": 0,
+				"progress2": 0,
+				"progress3": 0,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create daily quest document: %v", err)
+		}
+	}
+	return nil
 }
 
 // naming a pet
