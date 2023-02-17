@@ -10,9 +10,10 @@ type User struct {
 	HistorySearch []string `json:"historySearch"`
 
 	// Reference collection
-	Posts    []*firestore.DocumentRef `json:"posts,omitempty"`
-	Comments []*firestore.DocumentRef `json:"comments,omitempty"`
-	Likes    []*firestore.DocumentRef `json:"likes,omitempty"`
+	DailyQuests map[string]*DailyQuestProgress `json:"dailyQuests,omitempty"`
+	Posts       []*firestore.DocumentRef       `json:"posts,omitempty"`
+	Comments    []*firestore.DocumentRef       `json:"comments,omitempty"`
+	Likes       []*firestore.DocumentRef       `json:"likes,omitempty"`
 }
 
 type UserResponse struct {

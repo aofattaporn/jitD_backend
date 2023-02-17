@@ -91,6 +91,7 @@ func GetAllPost(c *gin.Context) {
 	for _, element := range snap {
 
 		post := models.Post{}
+		postRes.Category = []string{}
 		mapstructure.Decode(element.Data(), &post)
 		mapstructure.Decode(post, &postRes)
 
@@ -144,6 +145,7 @@ func GetMyPost(c *gin.Context) {
 		postRes.Date = post.Date
 		postRes.CountComment = len(post.Comment)
 		postRes.CountLike = len(post.Like)
+		postRes.Category = post.Category
 
 		postsRes = append(postsRes, postRes)
 	}
@@ -295,19 +297,13 @@ func GetPostByKeyword(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 	user_id := c.Request.Header.Get("id")
+	keyword := c.Param("keyword")
 	user := models.User{}
-
-	// bind the keyword from the request body
-	keyword := models.Post{}
-	if errBadReq := c.BindJSON(&keyword); errBadReq != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
-		return
-	}
 
 	// adding in history
 	userDoc, _ := client.Collection("User").Doc(user_id).Get(ctx)
 	mapstructure.Decode(userDoc.Data(), &user)
-	user.HistorySearch = append(user.HistorySearch, keyword.Content)
+	user.HistorySearch = append(user.HistorySearch, keyword)
 
 	// Reverse the search history list
 	for i, j := 0, len(user.HistorySearch)-1; i < j; i, j = i+1, j-1 {
@@ -326,7 +322,7 @@ func GetPostByKeyword(c *gin.Context) {
 	}
 
 	// find documents that contain the keyword
-	query := client.Collection("Post").Where("Content", ">=", keyword.Content).Limit(10)
+	query := client.Collection("Post").Where("Content", ">=", keyword).Limit(10)
 	iter := query.Documents(ctx)
 	defer iter.Stop()
 
