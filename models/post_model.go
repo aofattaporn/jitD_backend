@@ -13,7 +13,7 @@ type Post struct {
 	IsPublic bool                     `json:"isPublic"`
 	Category []string                 `json:"category,omitempty"`
 	Comment  []*firestore.DocumentRef `json:"comment,omitempty"`
-	Like     []*firestore.DocumentRef `json:"like,omitempty"`
+	LikesRef []*Like                  `json:"likesref,omitempty"`
 }
 
 type PostResponse struct {

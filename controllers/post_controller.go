@@ -48,7 +48,7 @@ func CreatePost(c *gin.Context) {
 		post.UserID = userRef.Ref
 		post.Date = time.Now().UTC()
 		post.Comment = []*firestore.DocumentRef{}
-		post.Like = []*firestore.DocumentRef{}
+		post.LikesRef = []*models.Like{}
 		postRef, _, post_err := client.Collection("Post").Add(ctx, post)
 		if post_err != nil {
 			return post_err
@@ -97,7 +97,7 @@ func GetAllPost(c *gin.Context) {
 
 		postRes.UserId = post.UserID.ID
 		postRes.PostId = element.Ref.ID
-		postRes.CountLike = len(post.Like)
+		postRes.CountLike = len(post.LikesRef)
 		postRes.CountComment = len(post.Comment)
 		postRes.Category = post.Category
 		postRes.Date = post.Date
@@ -144,7 +144,7 @@ func GetMyPost(c *gin.Context) {
 		postRes.PostId = element.Ref.ID
 		postRes.Date = post.Date
 		postRes.CountComment = len(post.Comment)
-		postRes.CountLike = len(post.Like)
+		postRes.CountLike = len(post.LikesRef)
 		postRes.Category = post.Category
 
 		postsRes = append(postsRes, postRes)
@@ -209,12 +209,12 @@ func UpdatePost(c *gin.Context) {
 	post.IsPublic = updatedPost.IsPublic
 	post.Category = updatedPost.Category
 	post.Date = currentDateTime
-	post.Like = updatedPost.Like
+	post.LikesRef = updatedPost.LikesRef
 	if len(post.Comment) == 0 {
 		post.Comment = []*firestore.DocumentRef{}
 	}
-	if len(post.Like) == 0 {
-		post.Like = []*firestore.DocumentRef{}
+	if len(post.LikesRef) == 0 {
+		post.LikesRef = []*models.Like{}
 	}
 
 	// Update the post document in the database
@@ -344,7 +344,7 @@ func GetPostByKeyword(c *gin.Context) {
 
 		postRes.UserId = post.UserID.ID
 		postRes.PostId = doc.Ref.ID
-		postRes.CountLike = len(post.Like)
+		postRes.CountLike = len(post.LikesRef)
 		postRes.CountComment = len(post.Comment)
 		postRes.Category = post.Category
 		postRes.Date = post.Date

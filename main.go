@@ -23,6 +23,7 @@ func main() {
 	routes.UserRoute(router)
 	routes.PostRoutes(router)
 	routes.CommentRoutes(router)
+	routes.LikeRoutes(router)
 
 	// configue on port 3000
 	router.Run("0.0.0.0:3000")

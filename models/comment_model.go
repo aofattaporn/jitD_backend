@@ -7,11 +7,11 @@ import (
 )
 
 type Comment struct {
-	Content string                   `json:"content"`
-	UserId  *firestore.DocumentRef   `json:"userId"`
-	PostId  *firestore.DocumentRef   `json:"postId"`
-	Like    []*firestore.DocumentRef `json:"like,omitempty"`
-	Date    time.Time                `json:"date,omitempty"`
+	Content string                 `json:"content"`
+	UserId  *firestore.DocumentRef `json:"userId"`
+	PostId  *firestore.DocumentRef `json:"postId"`
+	Like    []*LikeComment         `json:"like,omitempty"`
+	Date    time.Time              `json:"date,omitempty"`
 }
 
 type CommentResponse struct {

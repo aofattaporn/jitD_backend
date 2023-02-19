@@ -39,7 +39,7 @@ func CreateComment(c *gin.Context) {
 	comment.Content = string(comment.Content)
 	comment.UserId = userRef
 	comment.PostId = postRef
-	comment.Like = []*firestore.DocumentRef{}
+	comment.Like = []*models.LikeComment{}
 	comment.Date = time.Now().UTC()
 
 	// get user and post doccument
@@ -274,7 +274,7 @@ func GetAllComment(c *gin.Context) {
 	// initail data
 	comments := []models.CommentResponse{}
 	commentRes := models.CommentResponse{}
-	comment := models.Comment{}
+
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
@@ -289,6 +289,7 @@ func GetAllComment(c *gin.Context) {
 
 	// mapping data to commentRes
 	for _, element := range snap {
+		comment := models.Comment{}
 		mapstructure.Decode(element.Data(), &comment)
 		commentRes.UserId = comment.UserId.ID
 		commentRes.PostId = comment.PostId.ID
