@@ -17,6 +17,7 @@ import (
 func LikePost(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
+	var post models.Post
 
 	userID := c.Request.Header.Get("id")
 	postID := c.Param("post_id")
@@ -37,6 +38,17 @@ func LikePost(c *gin.Context) {
 			"message": "Cannot find user ID",
 		})
 		return
+	}
+	mapstructure.Decode(postRef.Data(), &post)
+
+	// check post have lke
+	for _, l := range post.LikesRef {
+		if l.UserRef.Path == userRef.Ref.Path {
+			c.AbortWithStatusJSON(http.StatusOK, gin.H{
+				"message": "User alredy like this post",
+			})
+			return
+		}
 	}
 
 	like := models.Like{
@@ -59,7 +71,7 @@ func LikePost(c *gin.Context) {
 		if err != nil {
 			return err
 		}
-		var post models.Post
+
 		err = postSnap.DataTo(&post)
 		if err != nil {
 			return err
@@ -179,6 +191,16 @@ func LikeComment(c *gin.Context) {
 		return
 	}
 	mapstructure.Decode(commentDocsnap.Data(), &comment)
+
+	// check post have lke
+	for _, l := range comment.Like {
+		if l.UserRef.Path == userRef.Path {
+			c.AbortWithStatusJSON(http.StatusOK, gin.H{
+				"message": "User alredy like this post",
+			})
+			return
+		}
+	}
 
 	like := models.LikeComment{
 		UserRef:    userRef,

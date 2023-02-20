@@ -16,4 +16,11 @@ func CommentRoutes(route *gin.Engine) {
 	// service that's not use iin fronent
 	v1.GET("/", controllers.GetAllComment)
 	v1.GET("/id", controllers.GetMyComment)
+
+	// test new struct
+	v1.POST("/new/:post_id", controllers.NewCreateComment)
+	v1.GET("/new/:post_id", controllers.NewGetComment)
+	v1.GET("/new/all/:post_id", controllers.NewGetAllComment)
+	v1.PUT("/new/:post_id/comment/:comment_id", controllers.NewUpdateComment)
+
 }
