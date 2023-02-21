@@ -7,8 +7,13 @@ import (
 )
 
 type Like struct {
-	User        User                   `json:"user"`
-	Type        string                 `json:"type"`
-	DocumentRef *firestore.DocumentRef `json:"documentRef,omitempty"`
-	Date        time.Time              `json:"date,omitempty"`
+	UserRef *firestore.DocumentRef `json:"userRef,omitempty"`
+	PostRef *firestore.DocumentRef `json:"postRef,omitempty"`
+	Date    time.Time              `json:"date,omitempty"`
+}
+
+type LikeComment struct {
+	UserID    string    `json:"userID,omitempty"`
+	CommentID string    `json:"commentID,omitempty"`
+	Date      time.Time `json:"date,omitempty"`
 }

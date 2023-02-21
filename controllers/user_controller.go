@@ -184,12 +184,6 @@ func GetUserById(c *gin.Context) {
 	// maping data to user model
 	mapstructure.Decode(dsnap.Data(), &userRes)
 
-	// check quest in user
-	// if have to map
-	//
-	// not have to initial
-	//
-
 	// InitializeDailyQuests(id, docref, ctx)
 	c.JSON(http.StatusOK, userRes)
 
