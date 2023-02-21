@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	configs "jitD/configs"
 	"jitD/models"
 	"net/http"
@@ -100,18 +101,20 @@ func NewGetAllCommentByPostID(c *gin.Context) {
 	client := configs.CreateClient(ctx)
 	postID := c.Param("post_id")
 	userID := c.Request.Header.Get("id")
-	post := models.Post2{}
+	post := models.Post{}
 	commentsRes := make([]models.CommentResponse, 0, len(post.Comment))
 	commentRes := &models.CommentResponse{}
 
 	// get Post by id
-	postDoc, err := getPost(ctx, client, postID)
+	postDoc, err := client.Collection("Post").Doc(postID).Get(ctx)
 	if err != nil {
 		errorCheck(c, err, "cant to find post id")
 		return
 	}
+	mapstructure.Decode(postDoc.Data(), &post)
+	fmt.Println(post)
 
-	for _, element := range postDoc.Comment {
+	for _, element := range post.Comment {
 		commentRes = &models.CommentResponse{}
 		mapstructure.Decode(element, &commentRes)
 		commentRes.UserId = client.Collection("User").Doc(userID).ID
@@ -197,22 +200,20 @@ func NewDeleteComment(c *gin.Context) {
 // this code about redundenc about code
 
 // getPost retrieves the post with the specified ID from Firestore.
-func getPost(ctx context.Context, client *firestore.Client, postID string) (*models.Post2, error) {
+func getPost(ctx context.Context, client *firestore.Client, postID string) (*models.Post, error) {
 	doc, err := client.Collection("Post").Doc(postID).Get(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var post models.Post2
-	if err := doc.DataTo(&post); err != nil {
-		return nil, err
-	}
+	var post models.Post
+	mapstructure.Decode(doc.Data(), &post)
 
 	return &post, nil
 }
 
 // updatePost updates the post with the specified ID in Firestore.
-func updatePost(ctx context.Context, client *firestore.Client, postID string, post *models.Post2) error {
+func updatePost(ctx context.Context, client *firestore.Client, postID string, post *models.Post) error {
 	_, err := client.Collection("Post").Doc(postID).Set(ctx, post)
 	return err
 }

@@ -13,7 +13,7 @@ type Like struct {
 }
 
 type LikeComment struct {
-	UserRef    *firestore.DocumentRef `json:"userRef,omitempty"`
-	CommentRef *firestore.DocumentRef `json:"commentRef,omitempty"`
-	Date       time.Time              `json:"date,omitempty"`
+	UserID    string    `json:"userID,omitempty"`
+	CommentID string    `json:"commentID,omitempty"`
+	Date      time.Time `json:"date,omitempty"`
 }

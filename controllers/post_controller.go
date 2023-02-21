@@ -47,7 +47,7 @@ func CreatePost(c *gin.Context) {
 	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
 		post.UserID = userRef.Ref
 		post.Date = time.Now().UTC()
-		post.Comment = []*firestore.DocumentRef{}
+		post.Comment = []*models.Comment2{}
 		post.LikesRef = []*models.Like{}
 		postRef, _, post_err := client.Collection("Post").Add(ctx, post)
 		if post_err != nil {
@@ -211,7 +211,7 @@ func UpdatePost(c *gin.Context) {
 	post.Date = currentDateTime
 	post.LikesRef = updatedPost.LikesRef
 	if len(post.Comment) == 0 {
-		post.Comment = []*firestore.DocumentRef{}
+		post.Comment = []*models.Comment2{}
 	}
 	if len(post.LikesRef) == 0 {
 		post.LikesRef = []*models.Like{}
@@ -296,38 +296,37 @@ func GetPostByKeyword(c *gin.Context) {
 	// create a context
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
-	user_id := c.Request.Header.Get("id")
+	userID := c.Request.Header.Get("id")
 	keyword := c.Param("keyword")
-	user := models.User{}
 
-	// adding in history
-	userDoc, _ := client.Collection("User").Doc(user_id).Get(ctx)
-	mapstructure.Decode(userDoc.Data(), &user)
-	user.HistorySearch = append(user.HistorySearch, keyword)
-
-	// Reverse the search history list
-	for i, j := 0, len(user.HistorySearch)-1; i < j; i, j = i+1, j-1 {
-		user.HistorySearch[i], user.HistorySearch[j] = user.HistorySearch[j], user.HistorySearch[i]
-	}
-
-	// Limit the search history list to the last 5 elements
-	if len(user.HistorySearch) > 5 {
-		user.HistorySearch = user.HistorySearch[:5]
-	}
-
-	// Save the updated user data
-	if _, err := client.Collection("User").Doc(user_id).Set(ctx, user); err != nil {
+	// Find user document and update search history
+	userRef := client.Collection("User").Doc(userID)
+	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		userSnap, err := tx.Get(userRef)
+		if err != nil {
+			return err
+		}
+		userData := userSnap.Data()
+		userHistory := userData["HistorySearch"].([]interface{})
+		userHistory = append(userHistory, keyword)
+		if len(userHistory) > 5 {
+			userHistory = userHistory[len(userHistory)-5:]
+		}
+		userData["HistorySearch"] = userHistory
+		return tx.Set(userRef, userData)
+	})
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
 		return
 	}
 
-	// find documents that contain the keyword
+	// Find posts containing the keyword
 	query := client.Collection("Post").Where("Content", ">=", keyword).Limit(10)
 	iter := query.Documents(ctx)
 	defer iter.Stop()
 
-	postRes := models.PostResponse{}
-	postsRes := []models.PostResponse{}
+	// Process query results and build response
+	postsRes := make([]models.PostResponse, 0, 10)
 	for {
 		doc, err := iter.Next()
 		if err == iterator.Done {
@@ -337,20 +336,22 @@ func GetPostByKeyword(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
 			return
 		}
-
-		post := models.Post{}
-		mapstructure.Decode(doc.Data(), &post)
-		mapstructure.Decode(post, &postRes)
-
-		postRes.UserId = post.UserID.ID
-		postRes.PostId = doc.Ref.ID
-		postRes.CountLike = len(post.LikesRef)
-		postRes.CountComment = len(post.Comment)
-		postRes.Category = post.Category
-		postRes.Date = post.Date
-
+		var post models.Post
+		err = doc.DataTo(&post)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+			return
+		}
+		postRes := models.PostResponse{
+			PostId:       doc.Ref.ID,
+			UserId:       post.UserID.ID,
+			Content:      post.Content,
+			Category:     post.Category,
+			Date:         post.Date,
+			CountLike:    len(post.LikesRef),
+			CountComment: len(post.Comment),
+		}
 		postsRes = append(postsRes, postRes)
-
 	}
 
 	// return the results

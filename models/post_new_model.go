@@ -6,7 +6,7 @@ import (
 	"cloud.google.com/go/firestore"
 )
 
-type Post2 struct {
+type Post struct {
 	UserID   *firestore.DocumentRef `json:"userId"`
 	Content  string                 `json:"content"`
 	Date     time.Time              `json:"ddate,omitempty"`
