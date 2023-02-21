@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	configs "jitD/configs"
 	"jitD/models"
 	"net/http"
@@ -103,7 +102,6 @@ func NewGetAllCommentByPostID(c *gin.Context) {
 	userID := c.Request.Header.Get("id")
 	post := models.Post{}
 	commentsRes := make([]models.CommentResponse, 0, len(post.Comment))
-	commentRes := &models.CommentResponse{}
 
 	// get Post by id
 	postDoc, err := client.Collection("Post").Doc(postID).Get(ctx)
@@ -112,17 +110,8 @@ func NewGetAllCommentByPostID(c *gin.Context) {
 		return
 	}
 	mapstructure.Decode(postDoc.Data(), &post)
-	fmt.Println(post)
 
-	for _, element := range post.Comment {
-		commentRes = &models.CommentResponse{}
-		mapstructure.Decode(element, &commentRes)
-		commentRes.UserId = client.Collection("User").Doc(userID).ID
-		commentRes.PostId = client.Collection("Post").Doc(postID).ID
-		commentRes.CountLike = len(element.Like)
-		commentRes.Date = element.Date
-		commentsRes = append(commentsRes, *commentRes)
-	}
+	commentsRes = getCommentsResponse(post, client, userID, postID)
 	c.JSON(http.StatusOK, commentsRes)
 }
 
@@ -149,10 +138,9 @@ func NewUpdateComment(c *gin.Context) {
 	}
 
 	// find index
-	for _, element := range post.Comment {
-		if element.CommentID == commentID {
-			element.Content = comment.Content
-			print(element.Content)
+	for index, _ := range post.Comment {
+		if post.Comment[index].CommentID == commentID {
+			post.Comment[index].Content = comment.Content
 			break
 		}
 	}
@@ -170,8 +158,11 @@ func NewUpdateComment(c *gin.Context) {
 func NewDeleteComment(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
+
+	userID := c.Request.Header.Get("id")
 	postID := c.Param("post_id")
 	commentID := c.Param("comment_id")
+	posts := models.Post{}
 
 	// get Post by id
 	post, err := getPost(ctx, client, postID)
@@ -194,7 +185,9 @@ func NewDeleteComment(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, post.Comment)
+	mapstructure.Decode(post, &posts)
+	commentsRes := getCommentsResponse(posts, client, userID, postID)
+	c.JSON(http.StatusOK, commentsRes)
 }
 
 // this code about redundenc about code
@@ -223,4 +216,21 @@ func errorCheck(c *gin.Context, err error, message string) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": message})
 	}
+}
+
+func getCommentsResponse(post models.Post, client *firestore.Client, userID string, postID string) []models.CommentResponse {
+	commentRes := &models.CommentResponse{}
+	commentsRes := make([]models.CommentResponse, 0, len(post.Comment))
+
+	for _, element := range post.Comment {
+		commentRes = &models.CommentResponse{}
+		mapstructure.Decode(element, &commentRes)
+		commentRes.UserId = client.Collection("User").Doc(userID).ID
+		commentRes.PostId = client.Collection("Post").Doc(postID).ID
+		commentRes.CountLike = len(element.Like)
+		commentRes.Date = element.Date
+		commentsRes = append(commentsRes, *commentRes)
+	}
+
+	return commentsRes
 }
