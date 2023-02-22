@@ -37,13 +37,16 @@ func NewCreateComment(c *gin.Context) {
 		return
 	}
 
-	// Add comment to post
-	comment.UserId = client.Collection("User").Doc(userID).ID
-	comment.Like = []*models.LikeComment{}
-	comment.Date = time.Now().UTC()
-	comment.CommentID = uuid.NewString()
+	var newComment = &models.Comment2{
+		CommentID: uuid.NewString(),
+		Content:   comment.Content,
+		UserId:    client.Collection("User").Doc(userID).ID,
+		Like:      []*models.LikeComment{},
+		Date:      time.Now().UTC(),
+	}
 
-	post.Comment = append(post.Comment, &comment)
+	// Add comment to post
+	post.Comment = append(post.Comment, newComment)
 
 	// Update post in Firestore
 	if err := updatePost(ctx, client, postID, post); err != nil {
@@ -51,17 +54,15 @@ func NewCreateComment(c *gin.Context) {
 		return
 	}
 
-	var commentsRes []models.CommentResponse
-	for _, element := range post.Comment {
-		commentRes := &models.CommentResponse{}
-		mapstructure.Decode(element, &commentRes)
-		commentRes.UserId = client.Collection("User").Doc(userID).ID
-		commentRes.PostId = client.Collection("Post").Doc(postID).ID
-		commentRes.CountLike = len(element.Like)
-		commentRes.Date = element.Date
-		commentsRes = append(commentsRes, *commentRes)
-	}
-	c.JSON(http.StatusOK, commentsRes)
+	c.JSON(http.StatusOK, &models.CommentResponse{
+		UserId:    userID,
+		PostId:    postID,
+		CommentId: newComment.CommentID,
+		Content:   comment.Content,
+		CountLike: 0,
+		Date:      newComment.Date,
+	})
+
 }
 
 // R (read a comment by post id and comment id)
@@ -119,11 +120,12 @@ func NewGetAllCommentByPostID(c *gin.Context) {
 func NewUpdateComment(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
+
 	postID := c.Param("post_id")
 	commentID := c.Param("comment_id")
 	userID := c.Request.Header.Get("id")
+
 	comment := models.Comment2{}
-	posts := models.Post{}
 
 	if err := c.BindJSON(&comment); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -139,9 +141,11 @@ func NewUpdateComment(c *gin.Context) {
 		return
 	}
 
+	var indexDelete int
 	// find index
 	for index, _ := range post.Comment {
 		if post.Comment[index].CommentID == commentID {
+			indexDelete = index
 			post.Comment[index].Content = comment.Content
 			break
 		}
@@ -153,10 +157,14 @@ func NewUpdateComment(c *gin.Context) {
 		return
 	}
 
-	mapstructure.Decode(post, &posts)
-	commentsRes := getCommentsResponse(posts, client, userID, postID)
-
-	c.JSON(http.StatusOK, commentsRes)
+	c.JSON(http.StatusOK, &models.CommentResponse{
+		UserId:    userID,
+		PostId:    postID,
+		CommentId: commentID,
+		Content:   post.Comment[indexDelete].Content,
+		CountLike: len(post.Comment[indexDelete].Like),
+		Date:      post.Comment[indexDelete].Date,
+	})
 }
 
 // D (delete a comment)
@@ -164,10 +172,9 @@ func NewDeleteComment(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
-	userID := c.Request.Header.Get("id")
 	postID := c.Param("post_id")
 	commentID := c.Param("comment_id")
-	posts := models.Post{}
+	userID := c.Request.Header.Get("id")
 
 	// get Post by id
 	post, err := getPost(ctx, client, postID)
@@ -176,11 +183,21 @@ func NewDeleteComment(c *gin.Context) {
 		return
 	}
 
+	// get comment delete
+	var deleteComment models.CommentResponse
 	// find index
 	for i, element := range post.Comment {
 		if element.CommentID == commentID {
+			deleteComment.UserId = userID
+			deleteComment.PostId = postID
+			deleteComment.CommentId = commentID
+			deleteComment.Content = element.Content
+			deleteComment.CountLike = len(element.Like)
+			deleteComment.Date = element.Date
+
 			post.Comment = append(post.Comment[:i], post.Comment[i+1:]...)
 			break
+
 		}
 	}
 
@@ -190,9 +207,7 @@ func NewDeleteComment(c *gin.Context) {
 		return
 	}
 
-	mapstructure.Decode(post, &posts)
-	commentsRes := getCommentsResponse(posts, client, userID, postID)
-	c.JSON(http.StatusOK, commentsRes)
+	c.JSON(http.StatusOK, deleteComment)
 }
 
 // this code about redundenc about code

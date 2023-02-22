@@ -7,6 +7,7 @@ import (
 	models "jitD/models"
 	"log"
 	"net/http"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
@@ -22,38 +23,27 @@ func CreateUser(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 	user := models.User{}
-	var errors []error
+	userID := c.Request.Header.Get("id")
 
 	// mapping data form body
 	if err := c.BindJSON(&user); err != nil {
-		errors = append(errors, err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "cant get user data ",
+		})
 	}
-
-	// assign empthy object
-	user.Posts = []*firestore.DocumentRef{}
-	user.Comments = []*firestore.DocumentRef{}
-	user.Likes = []*firestore.DocumentRef{}
-
-	// hinde
-	if err := c.BindHeader(&user); err != nil {
-		errors = append(errors, err)
-	}
-
-	user_id := c.Request.Header.Get("id")
 
 	// add data to document
-	fmt.Printf("header: %v\n", user_id)
-	_, err := client.Collection("User").Doc(user_id).Set(ctx, user)
+	_, err := client.Collection("User").Doc(userID).Set(ctx, user)
 	if err != nil {
-		log.Printf("An error has occurred: %s", err)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "create data success",
+			"message": "cant to set user to DB ",
 		})
-	} else {
-		c.JSON(http.StatusCreated, gin.H{
-			"message": "createdata success",
-		})
+		return
 	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "createdata success",
+	})
 }
 
 // Create a User
@@ -70,7 +60,7 @@ func SignIn(c *gin.Context) {
 	if err != nil {
 		log.Printf("An error has occurred: %s", err)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "you can acess data",
+			"message": "you can not acess data",
 		})
 	} else {
 		c.JSON(http.StatusOK, gin.H{
@@ -88,9 +78,6 @@ func SignInGoogle(c *gin.Context) {
 	user_id := c.Request.Header.Get("id")
 	user := models.User{}
 	user.Point = 0
-	user.Posts = []*firestore.DocumentRef{}
-	user.Comments = []*firestore.DocumentRef{}
-	user.Likes = []*firestore.DocumentRef{}
 
 	_, user_err := client.Collection("User").Doc(user_id).Get(ctx)
 	if user_err != nil {
@@ -124,13 +111,13 @@ func SignInGoogle(c *gin.Context) {
 // Get all user
 func GetAllUser(c *gin.Context) {
 
-	users := []models.UserResponse{}
-	userRes := models.UserResponse{}
+	users := []models.User{}
+	// dialyQuest := models.DailyQuestProgress{}
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
 	// retrieve all user
-	snap, err := client.Collection("User").Documents(ctx).GetAll()
+	userSnap, err := client.Collection("User").Documents(ctx).GetAll()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "cant get infomation",
@@ -138,90 +125,108 @@ func GetAllUser(c *gin.Context) {
 	}
 
 	// maping data to user model
-	for _, element := range snap {
-		/// mapdata and count list
+	for _, element := range userSnap {
 		user := models.User{}
 		mapstructure.Decode(element.Data(), &user)
-		userRes.UserId = element.Ref.ID
-		userRes.PetName = user.PetName
-		userRes.Point = user.Point
-		userRes.CountPosts = len(user.Posts)
-		userRes.CountComments = len(user.Comments)
-		userRes.CountLikes = len(user.Likes)
-
-		users = append(users, userRes)
+		users = append(users, user)
 	}
 	c.JSON(http.StatusOK, users)
 }
 
 // Get user by id
 func GetUserById(c *gin.Context) {
+	// Get user ID from the header
+	userID := c.Request.Header.Get("id")
 
-	print("sdfsdfdsfdf")
-
-	id := c.Request.Header.Get("id")
+	// Initialize user and user response
 	user := models.User{}
 	userRes := models.UserResponse{}
+
+	// Create Firestore client and context
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
-	// retrieve user by id
-	docref := client.Collection("User").Doc(id)
-	dsnap, err := docref.Get(ctx)
+	// Get user document by ID
+	docRef := client.Collection("User").Doc(userID)
+	dsnap, err := docRef.Get(ctx)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "cant get infomation",
+			"message": "Failed to retrieve user information",
 		})
-	}
-	// maping to response
-	userRes.UserId = dsnap.Ref.ID
-	userRes.PetName = user.PetName
-	userRes.Point = user.Point
-	userRes.CountPosts = len(user.Posts)
-	userRes.CountComments = len(user.Comments)
-	userRes.CountLikes = len(user.Likes)
-
-	// maping data to user model
-	mapstructure.Decode(dsnap.Data(), &userRes)
-
-	// InitializeDailyQuests(id, docref, ctx)
-	c.JSON(http.StatusOK, userRes)
-
-}
-
-func InitializeDailyQuests(userID string, userRef *firestore.DocumentRef, ctx context.Context) error {
-
-	// Get the user's daily quest document
-	dailyQuestRef := userRef.Collection("dailyQuest").Doc("today")
-	dailyQuestDoc, err := dailyQuestRef.Get(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get daily quest document: %v", err)
+		return
 	}
 
-	// If the daily quest document doesn't exist, create it
-	if !dailyQuestDoc.Exists() {
-		_, err := dailyQuestRef.Set(ctx, map[string]interface{}{
-			"quest1": map[string]interface{}{
-				"progress1": 0,
-				"progress2": 0,
-				"progress3": 0,
-			},
-			"quest2": map[string]interface{}{
-				"progress1": 0,
-				"progress2": 0,
-				"progress3": 0,
-			},
-			"quest3": map[string]interface{}{
-				"progress1": 0,
-				"progress2": 0,
-				"progress3": 0,
-			},
+	// Decode user document to user model
+	if err := dsnap.DataTo(&userRes); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Failed to decode user data",
 		})
-		if err != nil {
-			return fmt.Errorf("failed to create daily quest document: %v", err)
+		return
+	}
+	userRes.UserID = userID
+
+	// Decode user's daily quests from the document
+	if dailyQuests, err := dsnap.DataAt("DailyQuests"); err == nil {
+		if err := mapstructure.Decode(dailyQuests, &user.DailyQuests); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Failed to decode daily quests",
+			})
+			return
 		}
 	}
-	return nil
+
+	// Check and update user's daily quests
+	if updatedUser, err := checkQuest(user, client, ctx, userID); err == nil {
+		user = updatedUser
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Failed to update daily quests",
+		})
+		return
+	}
+
+	// Return user response
+	c.JSON(http.StatusOK, userRes)
+}
+
+func checkQuest(user models.User, client *firestore.Client, ctx context.Context, userID string) (models.User, error) {
+
+	today := time.Now().Day()
+
+	if user.DailyQuests == nil || user.DailyQuests.QuestDate.Day() != today {
+		var questName = [3]string{"PostQuest", "CommentQuest", "LikeQuest"}
+		var element []*models.Quest
+		for i, _ := range questName {
+			element = append(element, &models.Quest{
+				QuestName:      questName[i],
+				Progress:       0,
+				MaxProgress:    3,
+				Reward:         5,
+				Completed:      false,
+				LastCompletion: time.Now().UTC(),
+			})
+		}
+
+		user.DailyQuests = &models.DailyQuestProgress{
+			QuestDate: time.Now().UTC(),
+			Quests:    element,
+		}
+
+		// set data
+		user.DailyQuests.QuestDate = time.Now().UTC()
+
+		// save to db
+		_, err := client.Collection("User").Doc(userID).Set(ctx, user)
+		if err != nil {
+			return user, err
+		}
+
+		return user, nil
+
+	} else {
+		return user, nil
+	}
+
 }
 
 // naming a pet
