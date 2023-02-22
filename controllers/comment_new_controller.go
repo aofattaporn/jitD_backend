@@ -121,7 +121,9 @@ func NewUpdateComment(c *gin.Context) {
 	client := configs.CreateClient(ctx)
 	postID := c.Param("post_id")
 	commentID := c.Param("comment_id")
+	userID := c.Request.Header.Get("id")
 	comment := models.Comment2{}
+	posts := models.Post{}
 
 	if err := c.BindJSON(&comment); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -151,7 +153,10 @@ func NewUpdateComment(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, post.Comment)
+	mapstructure.Decode(post, &posts)
+	commentsRes := getCommentsResponse(posts, client, userID, postID)
+
+	c.JSON(http.StatusOK, commentsRes)
 }
 
 // D (delete a comment)
