@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
 
 	"github.com/gin-gonic/gin"
@@ -254,32 +253,12 @@ func GetPostByKeyword(c *gin.Context) {
 	// create a context
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
-	userID := c.Request.Header.Get("id")
+	// userID := c.Request.Header.Get("id")
 	keyword := c.Param("keyword")
 
-	// Find user document and update search history
-	userRef := client.Collection("User").Doc(userID)
-	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-		userSnap, err := tx.Get(userRef)
-		if err != nil {
-			return err
-		}
-		userData := userSnap.Data()
-		userHistory := userData["HistorySearch"].([]interface{})
-		userHistory = append(userHistory, keyword)
-		if len(userHistory) > 5 {
-			userHistory = userHistory[len(userHistory)-5:]
-		}
-		userData["HistorySearch"] = userHistory
-		return tx.Set(userRef, userData)
-	})
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
-		return
-	}
-
 	// Find posts containing the keyword
-	query := client.Collection("Post").Where("Content", ">=", keyword).Limit(10)
+	query := client.Collection("Post").Where("Content", ">=", keyword).Where("Content", "<=", keyword+"\uf8ff")
+
 	iter := query.Documents(ctx)
 	defer iter.Stop()
 
@@ -314,4 +293,6 @@ func GetPostByKeyword(c *gin.Context) {
 
 	// return the results
 	c.JSON(http.StatusOK, postsRes)
+
+	// TODO: set to user data
 }
