@@ -31,4 +31,5 @@ type PostResponse struct {
 	Category     []string  `json:"category"`
 	CountComment int       `json:"countComment"`
 	CountLike    int       `json:"countLike"`
+	IsLike       bool      `json:"isLike"`
 }

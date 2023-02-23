@@ -61,38 +61,19 @@ func NewCreateComment(c *gin.Context) {
 		Content:   comment.Content,
 		CountLike: 0,
 		Date:      newComment.Date,
+		IsLike:    false,
 	})
 
 }
 
-// R (read a comment by post id and comment id)
-func NewGetCommentByID(c *gin.Context) {
-	ctx := context.Background()
-	client := configs.CreateClient(ctx)
-	postID := c.Param("post_id")
-	userID := c.Request.Header.Get("id")
-	commentRes := models.CommentResponse{}
-
-	// get Post by id
-	post, err := getPost(ctx, client, postID)
-	if err != nil {
-		errorCheck(c, err, "cant to find post id")
-		return
+func checkISLike(userLike []*models.LikeComment, userID string) bool {
+	for _, lc := range userLike {
+		if lc.UserID == userID {
+			print("Like")
+			return true
+		}
 	}
-
-	if len(post.Comment) < 1 {
-		c.JSON(http.StatusOK, post.Comment)
-		return
-	}
-
-	for _, element := range post.Comment {
-		mapstructure.Decode(element, &commentRes)
-		commentRes.UserId = client.Collection("User").Doc(userID).ID
-		commentRes.PostId = client.Collection("Post").Doc(postID).ID
-		commentRes.Date = element.Date
-		commentRes.CountLike = len(element.Like)
-	}
-	c.JSON(http.StatusOK, commentRes)
+	return false
 }
 
 // R (read all comment by post id)
@@ -141,11 +122,11 @@ func NewUpdateComment(c *gin.Context) {
 		return
 	}
 
-	var indexDelete int
+	var indexUpdate int
 	// find index
 	for index, _ := range post.Comment {
 		if post.Comment[index].CommentID == commentID {
-			indexDelete = index
+			indexUpdate = index
 			post.Comment[index].Content = comment.Content
 			break
 		}
@@ -161,9 +142,10 @@ func NewUpdateComment(c *gin.Context) {
 		UserId:    userID,
 		PostId:    postID,
 		CommentId: commentID,
-		Content:   post.Comment[indexDelete].Content,
-		CountLike: len(post.Comment[indexDelete].Like),
-		Date:      post.Comment[indexDelete].Date,
+		Content:   post.Comment[indexUpdate].Content,
+		CountLike: len(post.Comment[indexUpdate].Like),
+		Date:      post.Comment[indexUpdate].Date,
+		IsLike:    false,
 	})
 }
 
@@ -194,6 +176,7 @@ func NewDeleteComment(c *gin.Context) {
 			deleteComment.Content = element.Content
 			deleteComment.CountLike = len(element.Like)
 			deleteComment.Date = element.Date
+			deleteComment.IsLike = false
 
 			post.Comment = append(post.Comment[:i], post.Comment[i+1:]...)
 			break
@@ -249,6 +232,7 @@ func getCommentsResponse(post models.Post, client *firestore.Client, userID stri
 		commentRes.PostId = client.Collection("Post").Doc(postID).ID
 		commentRes.CountLike = len(element.Like)
 		commentRes.Date = element.Date
+		commentRes.IsLike = checkISLike(element.Like, userID)
 		commentsRes = append(commentsRes, *commentRes)
 	}
 
