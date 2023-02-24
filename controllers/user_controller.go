@@ -32,6 +32,7 @@ func CreateUser(c *gin.Context) {
 		})
 	}
 
+	user.PetHP = 0
 	// add data to document
 	_, err := client.Collection("User").Doc(userID).Set(ctx, user)
 	if err != nil {
@@ -82,6 +83,7 @@ func SignInGoogle(c *gin.Context) {
 	_, user_err := client.Collection("User").Doc(user_id).Get(ctx)
 	if user_err != nil {
 		if status.Code(user_err) == codes.NotFound {
+			user.PetHP = 0
 			_, err := client.Collection("User").Doc(user_id).Set(ctx, user)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
@@ -202,6 +204,7 @@ func checkQuest(user models.User, client *firestore.Client, ctx context.Context,
 				Progress:       0,
 				MaxProgress:    3,
 				Reward:         5,
+				IsGetPoint:     false,
 				Completed:      false,
 				LastCompletion: time.Now().UTC(),
 			})

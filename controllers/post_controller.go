@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
 
 	"github.com/gin-gonic/gin"
@@ -110,6 +109,9 @@ func CreatePost(c *gin.Context) {
 		})
 		return
 	}
+
+	// TODO: update progress dialy quest
+	UpdateProgressQuest(c, "PostQuest")
 
 	// return data to frontend status 200
 	c.JSON(http.StatusOK, models.PostResponse{
@@ -254,32 +256,13 @@ func GetPostByKeyword(c *gin.Context) {
 	// create a context
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
-	userID := c.Request.Header.Get("id")
+
+	// userID := c.Request.Header.Get("id")
 	keyword := c.Param("keyword")
 
-	// Find user document and update search history
-	userRef := client.Collection("User").Doc(userID)
-	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-		userSnap, err := tx.Get(userRef)
-		if err != nil {
-			return err
-		}
-		userData := userSnap.Data()
-		userHistory := userData["HistorySearch"].([]interface{})
-		userHistory = append(userHistory, keyword)
-		if len(userHistory) > 5 {
-			userHistory = userHistory[len(userHistory)-5:]
-		}
-		userData["HistorySearch"] = userHistory
-		return tx.Set(userRef, userData)
-	})
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
-		return
-	}
-
 	// Find posts containing the keyword
-	query := client.Collection("Post").Where("Content", ">=", keyword).Limit(10)
+	query := client.Collection("Post").Where("Content", ">=", keyword).Where("Content", "<=", keyword+"\uf8ff")
+
 	iter := query.Documents(ctx)
 	defer iter.Stop()
 
@@ -314,4 +297,54 @@ func GetPostByKeyword(c *gin.Context) {
 
 	// return the results
 	c.JSON(http.StatusOK, postsRes)
+
+	// TODO: set to user data
+}
+
+// get by by cateegory
+func GetPostByCategorry(c *gin.Context) {
+
+	// create a context
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
+	// declare all id to use
+	userID := c.Request.Header.Get("id")
+
+	// declare object to usee
+	category := c.Param("category")
+	postsRes := []models.PostResponse{}
+	postRes := models.PostResponse{}
+
+	//geet all post by category
+	postsDoc, err := client.Collection("Post").Where("Category", "array_contains", category).Documents(ctx).GetAll()
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "cant to get all post by cateegory"})
+		return
+	}
+
+	// loop data snap and decode data to post respone
+	for _, doc := range postsDoc {
+
+		post := models.Post{}
+		postRes.Category = []string{}
+		mapstructure.Decode(doc.Data(), &post)
+
+		// map data to seend to fronend
+		postRes.UserId = post.UserID.ID
+		postRes.PostId = doc.Ref.ID
+		postRes.Content = post.Content
+		postRes.Date = post.Date
+		postRes.IsPublic = post.IsPublic
+		postRes.CountLike = len(post.LikesRef)
+		postRes.CountComment = len(post.Comment)
+		postRes.Category = post.Category
+		postRes.IsLike = checkIsLikePost(post.LikesRef, userID)
+
+		postsRes = append(postsRes, postRes)
+	}
+
+	// return json status code 200
+	c.JSON(http.StatusOK, postsRes)
+
 }

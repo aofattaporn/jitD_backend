@@ -14,6 +14,7 @@ type Quest struct {
 	Progress       int       `json:"progress"`
 	MaxProgress    int       `json:"maxProgress"`
 	Reward         int       `json:"reward"`
+	IsGetPoint     bool      `json:"isGetPoint"`
 	Completed      bool      `json:"completed"`
 	LastCompletion time.Time `json:"lastCompletion"`
 }

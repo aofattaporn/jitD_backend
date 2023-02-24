@@ -2,164 +2,179 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	configs "jitD/configs"
 	"jitD/models"
 	"net/http"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
+	"github.com/mitchellh/mapstructure"
 )
 
-// import (
-// 	"context"
-// 	"fmt"
-// 	configs "jitD/configs"
-// 	models "jitD/models"
-// 	"net/http"
-// 	"time"
+// LikePost creates a user like on a post
+func LikePost(c *gin.Context) {
 
-// 	"cloud.google.com/go/firestore"
-// 	"github.com/gin-gonic/gin"
-// 	mapstructure "github.com/mitchellh/mapstructure"
-// )
+	// declare instance of fiirestore
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+	client.Close()
 
-// // LikePost creates a user like on a post
-// func LikePost(c *gin.Context) {
-// 	ctx := context.Background()
-// 	client := configs.CreateClient(ctx)
-// 	var post models.Post
+	// declare id to use in this function
+	userID := c.Request.Header.Get("id")
+	postID := c.Param("post_id")
 
-// 	userID := c.Request.Header.Get("id")
-// 	postID := c.Param("post_id")
+	// declare object to use in this function
+	var post models.Post
 
-// 	// get post ref
-// 	postRef, err := client.Collection("Post").Doc(postID).Get(ctx)
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"message": "Cannot find user ID",
-// 		})
-// 		return
-// 	}
-// 	mapstructure.Decode(postRef.Data(), &post)
+	// crete like object for save to db
+	like := models.Like{
+		UserRef: client.Collection("User").Doc(userID),
+		PostRef: client.Collection("Post").Doc(postID),
+		Date:    time.Now().UTC(),
+	}
 
-// 	like := models.Like{
-// 		UserRef: client.Collection("User").Doc(userID),
-// 		PostRef: postRef.Ref,
-// 		Date:    time.Now().UTC(),
-// 	}
+	// run transaction
+	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
 
-// 	err = client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		// Create a like
+		_, _, err := client.Collection("Like").Add(ctx, like)
+		if err != nil {
+			return err
+		}
 
-// 		// Create a like
-// 		_, _, err := client.Collection("Like").Add(ctx, like)
-// 		if err != nil {
-// 			return err
-// 		}
+		// get post data by post id to map
+		postRef := client.Collection("Post").Doc(postID)
+		postSnap, err := tx.Get(postRef)
+		if err != nil {
+			return err
+		}
 
-// 		// Update post
-// 		postRef := client.Collection("Post").Doc(postID)
-// 		postSnap, err := tx.Get(postRef)
-// 		if err != nil {
-// 			return err
-// 		}
+		// map data to post
+		err = postSnap.DataTo(&post)
+		if err != nil {
+			return err
+		}
 
-// 		err = postSnap.DataTo(&post)
-// 		if err != nil {
-// 			return err
-// 		}
+		// append to post like ref and set to DDB
+		post.LikesRef = append(post.LikesRef, &like)
+		err = tx.Set(postRef, post)
+		if err != nil {
+			return err
+		}
 
-// 		post.LikesRef = append(post, &like)
-// 		err = tx.Set(postRef, post)
-// 		if err != nil {
-// 			return err
-// 		}
+		return nil
+	})
 
-// 		return nil
-// 	})
+	// check err from transaction
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": fmt.Sprintf("Something went wrong: %v", err),
+		})
+		return
+	}
 
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"message": fmt.Sprintf("Something went wrong: %v", err),
-// 		})
-// 		return
-// 	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Post liked successfully",
+	})
+}
 
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"message": "Post liked successfully",
-// 	})
-// }
+// UnlikePost removes a user like from a post
+func UnlikePost(c *gin.Context) {
 
-// // UnlikePost removes a user like from a post
-// func UnlikePost(c *gin.Context) {
-// 	ctx := context.Background()
-// 	client := configs.CreateClient(ctx)
-// 	post := models.Post{}
+	// declare instance of fiirestore
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
 
-// 	userID := c.Request.Header.Get("id")
-// 	postID := c.Param("post_id")
+	// declare id to use in this function
+	userID := c.Request.Header.Get("id")
+	postID := c.Param("post_id")
 
-// 	// get user ref
-// 	userRef := client.Collection("User").Doc(userID)
+	// declare object to use in this function
+	post := models.Post{}
 
-// 	// get post ref
-// 	postRef := client.Collection("Post").Doc(postID)
-// 	postDocsnap, errPost := postRef.Get(ctx)
-// 	mapstructure.Decode(postDocsnap.Data(), &post)
-// 	if errPost != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"message": fmt.Sprintf("Something went wrong: %v", errPost),
-// 		})
-// 		return
-// 	}
+	// get referenc of postID and userID
+	userRef := client.Collection("User").Doc(userID)
+	postRef := client.Collection("Post").Doc(postID)
 
-// 	// check if the user has liked the post
-// 	likeQuery := client.Collection("Like").Where("UserRef", "==", userRef).Where("PostRef", "==", postRef).Limit(1)
-// 	likeDocs, err := likeQuery.Documents(ctx).GetAll()
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"message": fmt.Sprintf("Something went wrong: %v", err),
-// 		})
-// 		return
-// 	}
+	// get post data from post ref and map to post
+	postDocsnap, errPost := postRef.Get(ctx)
+	if errPost != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": fmt.Sprintf("Something went wrong: %v", errPost),
+		})
+		return
+	}
 
-// 	// delete the user like and update the post
-// 	err = client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-// 		if len(likeDocs) > 0 {
-// 			likeRef := likeDocs[0].Ref
+	// save data to post
+	mapstructure.Decode(postDocsnap.Data(), &post)
 
-// 			// delete the user like
-// 			err = tx.Delete(likeRef)
-// 			if err != nil {
-// 				return err
-// 			}
+	// save like data to post.like
+	if likeDoc, err := postDocsnap.DataAt("LikesRef"); err == nil {
+		if err := mapstructure.Decode(likeDoc, &post.LikesRef); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "failed to decode like of post",
+			})
+			return
+		}
+	}
 
-// 			for i, likeRef := range post.LikesRef {
-// 				if likeRef.PostRef.Path == likeRef.PostRef.Path {
-// 					post.LikesRef = append(post.LikesRef[:i], post.LikesRef[i+1:]...)
-// 					break
-// 				}
-// 			}
+	// check if the user has liked the post
+	likeQuery := client.Collection("Like").Where("UserRef", "==", userRef).Where("PostRef", "==", postRef)
+	likeDocs, err := likeQuery.Documents(ctx).GetAll()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": fmt.Sprintf("Something went wrong: %v", err),
+		})
+		return
+	}
 
-// 			err = tx.Set(postRef, post)
-// 			if err != nil {
-// 				return err
-// 			}
-// 		}
+	// delete the user like and update the post
+	err = client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
 
-// 		return nil
-// 	})
+		if len(likeDocs) > 0 {
 
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"message": fmt.Sprintf("Something went wrong: %v", err),
-// 		})
-// 		return
-// 	}
+			// remove all like from like collection
+			for i, _ := range likeDocs {
+				likeRef := likeDocs[i].Ref
+				// delete the user like
+				err = tx.Delete(likeRef)
+				if err != nil {
+					return err
+				}
+			}
 
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"message": "Post unliked successfully",
-// 	})
-// }
+			// remove lke from post data
+			for i, like := range post.LikesRef {
+				if like.UserRef.ID == userID && like.PostRef.ID == postID {
+					post.LikesRef = append(post.LikesRef[:i], post.LikesRef[i+1:]...)
+					break
+				}
+			}
+
+			err = tx.Set(postRef, post)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	// check err from backend
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": fmt.Sprintf("Something went wrong: %v", err),
+		})
+		return
+	}
+
+	// returrn json to frontend
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Post unliked successfully",
+	})
+}
 
 // Like Comment
 func LikeComment(c *gin.Context) {
