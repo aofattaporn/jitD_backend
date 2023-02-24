@@ -110,6 +110,9 @@ func CreatePost(c *gin.Context) {
 		return
 	}
 
+	// TODO: update progress dialy quest
+	UpdateProgressQuest(c, "PostQuest")
+
 	// return data to frontend status 200
 	c.JSON(http.StatusOK, models.PostResponse{
 		UserId:       userID,
@@ -253,6 +256,7 @@ func GetPostByKeyword(c *gin.Context) {
 	// create a context
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
+
 	// userID := c.Request.Header.Get("id")
 	keyword := c.Param("keyword")
 
@@ -295,4 +299,52 @@ func GetPostByKeyword(c *gin.Context) {
 	c.JSON(http.StatusOK, postsRes)
 
 	// TODO: set to user data
+}
+
+// get by by cateegory
+func GetPostByCategorry(c *gin.Context) {
+
+	// create a context
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
+	// declare all id to use
+	userID := c.Request.Header.Get("id")
+
+	// declare object to usee
+	category := c.Param("category")
+	postsRes := []models.PostResponse{}
+	postRes := models.PostResponse{}
+
+	//geet all post by category
+	postsDoc, err := client.Collection("Post").Where("Category", "array_contains", category).Documents(ctx).GetAll()
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "cant to get all post by cateegory"})
+		return
+	}
+
+	// loop data snap and decode data to post respone
+	for _, doc := range postsDoc {
+
+		post := models.Post{}
+		postRes.Category = []string{}
+		mapstructure.Decode(doc.Data(), &post)
+
+		// map data to seend to fronend
+		postRes.UserId = post.UserID.ID
+		postRes.PostId = doc.Ref.ID
+		postRes.Content = post.Content
+		postRes.Date = post.Date
+		postRes.IsPublic = post.IsPublic
+		postRes.CountLike = len(post.LikesRef)
+		postRes.CountComment = len(post.Comment)
+		postRes.Category = post.Category
+		postRes.IsLike = checkIsLikePost(post.LikesRef, userID)
+
+		postsRes = append(postsRes, postRes)
+	}
+
+	// return json status code 200
+	c.JSON(http.StatusOK, postsRes)
+
 }
