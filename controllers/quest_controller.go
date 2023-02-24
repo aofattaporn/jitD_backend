@@ -11,7 +11,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-func UpdateProgressQuest(c *gin.Context) {
+func UpdateProgressQuest(c *gin.Context, questName string) {
 
 	// declare instance of firestore
 	ctx := context.Background()
@@ -35,7 +35,7 @@ func UpdateProgressQuest(c *gin.Context) {
 
 	quest := models.DailyQuestProgress{}
 	// Decode user's daily quests from the document
-	if dailyQuests, err := userDoc.DataAt("DailyQuests"); err == nil {
+	if dailyQuests, err := userDoc.DataAt(questName); err == nil {
 		if err := mapstructure.Decode(dailyQuests, &quest); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "Failed to decode daily quests",
@@ -46,7 +46,7 @@ func UpdateProgressQuest(c *gin.Context) {
 
 	if quest.Quests != nil {
 		for index, _ := range quest.Quests {
-			if quest.Quests[index].QuestName == "LikeQuest" {
+			if quest.Quests[index].QuestName == questName {
 				// updat progess quest
 				if quest.Quests[index].Completed {
 					return
