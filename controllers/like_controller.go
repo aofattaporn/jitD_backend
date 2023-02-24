@@ -19,7 +19,6 @@ func LikePost(c *gin.Context) {
 	// declare instance of fiirestore
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
-	client.Close()
 
 	// declare id to use in this function
 	userID := c.Request.Header.Get("id")
@@ -33,6 +32,21 @@ func LikePost(c *gin.Context) {
 		UserRef: client.Collection("User").Doc(userID),
 		PostRef: client.Collection("Post").Doc(postID),
 		Date:    time.Now().UTC(),
+	}
+
+	likeExis, errExist := client.Collection("Like").Where("UserRef", "==", client.Collection("User").Doc(userID)).Where("PostRef", "==", client.Collection("Post").Doc(postID)).Documents(ctx).GetAll()
+	if errExist != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "cant to access like collection",
+		})
+		return
+	}
+
+	if len(likeExis) > 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "you already like this post",
+		})
+		return
 	}
 
 	// run transaction
@@ -313,5 +327,61 @@ func UnLikeComment(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Comment unliked successfully",
+	})
+}
+
+func LikePost2(c *gin.Context) {
+
+	// declare instance of fiirestore
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
+	// declare id to use in this function
+	userID := c.Request.Header.Get("id")
+	postID := c.Param("post_id")
+
+	// declare object to use in this function
+	var post models.Post
+
+	// crete like object for save to db
+	like := models.Like{
+		UserRef: client.Collection("User").Doc(userID),
+		PostRef: client.Collection("Post").Doc(postID),
+		Date:    time.Now().UTC(),
+	}
+
+	fmt.Printf("postID: %v\n", postID)
+
+	// save to post collection
+	postDoc, err := client.Collection("Post").Doc(postID).Get(ctx)
+	if err != nil {
+		fmt.Println(err)
+		c.JSON(http.StatusOK, gin.H{
+			"message": "cant to get post by this id ก",
+		})
+		return
+	}
+	mapstructure.Decode(postDoc.Data(), &post)
+
+	// add to new data
+	_, _, err = client.Collection("Like").Add(ctx, like)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "cant to set like to like collection",
+		})
+		return
+	}
+
+	post.LikesRef = append(post.LikesRef, &like)
+	_, err = client.Collection("Post").Doc(postID).Set(ctx, post)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "cant to set like to like collection",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Post liked successfully",
 	})
 }
