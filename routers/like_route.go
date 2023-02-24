@@ -12,6 +12,7 @@ func LikeRoutes(route *gin.Engine) {
 	v1Like.PUT("/comment/:comment_id/post/:post_id", controllers.LikeComment)
 
 	v1UnLike := route.Group("v1/unlike")
+	v1UnLike.PUT("/post/:post_id", controllers.UnlikePost)
 	v1UnLike.PUT("/comment/:comment_id/post/:post_id", controllers.UnLikeComment)
 
 }

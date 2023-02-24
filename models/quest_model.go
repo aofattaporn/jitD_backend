@@ -2,11 +2,14 @@ package models
 
 import (
 	"time"
+
+	"cloud.google.com/go/firestore"
 )
 
 type DailyQuestProgress struct {
-	QuestDate time.Time `json:"questTime"`
-	Quests    []*Quest  `json:"quest"`
+	UserID    *firestore.DocumentRef `json:"userId"`
+	QuestDate time.Time              `json:"questTime"`
+	Quests    []*Quest               `json:"quest"`
 }
 
 type Quest struct {
