@@ -111,7 +111,7 @@ func CreatePost(c *gin.Context) {
 	}
 
 	// TODO: update progress dialy quest
-	UpdateProgressQuest(c, "PostQuest")
+	// UpdateProgressQuest(c, "PostQuest")
 
 	// return data to frontend status 200
 	c.JSON(http.StatusOK, models.PostResponse{

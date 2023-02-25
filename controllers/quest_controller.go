@@ -32,7 +32,7 @@ func GetMyQuest(c *gin.Context) {
 	// check diary queest
 	questDoc, err := client.Collection("DialyQuest").Where("UserID", "==", client.Collection("User").Doc(userID)).Limit(1).Documents(ctx).GetAll()
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "cant to update user data quest"})
+		c.JSON(http.StatusBadGateway, gin.H{"message": "cant to update user data quest"})
 		return
 	}
 
@@ -110,7 +110,7 @@ func GetMyQuest(c *gin.Context) {
 				return
 			}
 
-			c.JSON(http.StatusNotFound, diaryQuest)
+			c.JSON(http.StatusOK, diaryQuest)
 			return
 		} else {
 			c.JSON(http.StatusOK, quest)
@@ -126,7 +126,7 @@ func GetMyQuest(c *gin.Context) {
 
 }
 
-func UpdateProgressQuest(c *gin.Context, questName string) {
+func UpdateProgressQuest(c *gin.Context) {
 
 	// declare instance of firestore
 	ctx := context.Background()
@@ -135,51 +135,48 @@ func UpdateProgressQuest(c *gin.Context, questName string) {
 	// get all id to use
 	userID := c.Request.Header.Get("id")
 
-	// delcrae object data
-	user := models.User{}
+	// get user to object
+	dialyQuest := models.DailyQuestProgress{}
 
 	// get a user
-	userDoc, err := client.Collection("User").Doc(userID).Get(ctx)
+	userDoc, err := client.Collection("DialyQuest").Where("UserID", "==", client.Collection("User").Doc(userID)).Documents(ctx).GetAll()
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "cant to find by user id"})
+		c.JSON(http.StatusBadGateway, gin.H{"message": "cant to find by user id"})
+		return
+	}
+
+	if len(userDoc) > 1 || len(userDoc) == 0 {
+		fmt.Println(len(userDoc))
+		fmt.Println(client.Collection("User").Doc(userID))
+
+		c.JSON(http.StatusBadGateway, gin.H{"message": "cant to get your quest"})
 		return
 	}
 
 	// mapping data
-	mapstructure.Decode(userDoc.Data(), &user)
+	mapstructure.Decode(userDoc[0].Data(), &dialyQuest)
 
-	quest := models.DailyQuestProgress{}
-	// Decode user's daily quests from the document
-	if dailyQuests, err := userDoc.DataAt(questName); err == nil {
-		if err := mapstructure.Decode(dailyQuests, &quest); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": "Failed to decode daily quests",
-			})
-			return
-		}
-	}
-
-	if quest.Quests != nil {
-		for index, _ := range quest.Quests {
-			if quest.Quests[index].QuestName == questName {
+	if dialyQuest.Quests != nil {
+		for index, _ := range dialyQuest.Quests {
+			if dialyQuest.Quests[index].QuestName == "LikeQuest" {
 				// updat progess quest
-				if quest.Quests[index].Completed {
+				if dialyQuest.Quests[index].Completed {
 					return
 				} else {
-					quest.Quests[index].Progress += 1
+					dialyQuest.Quests[index].Progress += 1
 
 					// set new reward
-					if quest.Quests[index].IsGetPoint {
-						quest.Quests[index].Reward = quest.Quests[index].Progress * 5
+					if dialyQuest.Quests[index].IsGetPoint {
+						dialyQuest.Quests[index].Reward = dialyQuest.Quests[index].Progress * 5
 					} else {
-						quest.Quests[index].Reward = 5
+						dialyQuest.Quests[index].Reward = 5
 					}
 
 					// set completed
-					if quest.Quests[index].Progress == quest.Quests[index].MaxProgress {
-						quest.Quests[index].Completed = true
+					if dialyQuest.Quests[index].Progress == dialyQuest.Quests[index].MaxProgress {
+						dialyQuest.Quests[index].Completed = true
 					}
-					quest.Quests[index].IsGetPoint = true
+					dialyQuest.Quests[index].IsGetPoint = true
 
 				}
 				break
@@ -187,67 +184,12 @@ func UpdateProgressQuest(c *gin.Context, questName string) {
 		}
 	}
 
-	// mapstructure.Decode(quest, &user.DailyQuests)
-
-	fmt.Printf("user.Point: %v\n", user.Point)
-
-	_, err = client.Collection("User").Doc(userID).Set(ctx, user)
+	_, err = client.Collection("DialyQuest").Doc(userDoc[0].Ref.ID).Set(ctx, dialyQuest)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"message": "update success"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "update success"})
 		return
 	}
+
+	c.JSON(http.StatusOK, dialyQuest)
+	return
 }
-
-// func GetPointFromQuest(c *gin.Context) {
-
-// 	// declare instance of firestore
-// 	ctx := context.Background()
-// 	client := configs.CreateClient(ctx)
-
-// 	// get all id to use
-// 	userID := c.Request.Header.Get("id")
-
-// 	// delcrae object data
-// 	user := models.User{}
-
-// 	// get a user
-// 	userDoc, err := client.Collection("User").Doc(userID).Get(ctx)
-// 	if err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"message": "cant to find by user id"})
-// 		return
-// 	}
-
-// 	// mapping data
-// 	mapstructure.Decode(userDoc.Data(), &user)
-
-// 	pointGet := 0
-// 	// Decode user's daily quests from the document
-// 	if dailyQuests, err := userDoc.DataAt("DailyQuests"); err == nil {
-// 		if err := mapstructure.Decode(dailyQuests, &user.DailyQuests); err != nil {
-// 			c.JSON(http.StatusBadRequest, gin.H{
-// 				"message": "Failed to decode daily quests",
-// 			})
-// 			return
-// 		}
-// 	}
-
-// 	// get point by name quest
-// 	for index, _ := range user.DailyQuests.Quests {
-// 		if user.DailyQuests.Quests[index].QuestName == "LikeQuest" && user.DailyQuests.Quests[index].IsGetPoint == true {
-// 			pointGet = user.DailyQuests.Quests[index].Reward
-// 			user.DailyQuests.Quests[index].IsGetPoint = false
-// 			break
-// 		}
-// 	}
-
-// 	// set new point and hp
-// 	user.Point += pointGet
-
-// 	// set to db
-// 	_, err = client.Collection("User").Doc(userID).Set(ctx, user)
-// 	if err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"message": "cant to update user data quest"})
-// 		return
-// 	}
-
-// }

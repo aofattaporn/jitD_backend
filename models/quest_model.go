@@ -8,7 +8,7 @@ import (
 
 type DailyQuestProgress struct {
 	UserID    *firestore.DocumentRef `json:"userId"`
-	QuestDate time.Time              `json:"questTime"`
+	QuestDate time.Time              `json:"questDate"`
 	Quests    []*Quest               `json:"quest"`
 }
 

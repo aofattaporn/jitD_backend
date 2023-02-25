@@ -12,5 +12,6 @@ func QuestRoute(route *gin.Engine) {
 	// v1.PUT("/updatePoint", controllers.UpdateProgressQuest())
 	// v1.PUT("/getPoint", controllers.GetPointFromQuest)
 	v1.GET("/id", controllers.GetMyQuest)
+	v1.GET("/test", controllers.UpdateProgressQuest)
 
 }
