@@ -6,8 +6,10 @@ import (
 	configs "jitD/configs"
 	"jitD/models"
 	"net/http"
+	"strconv"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
@@ -146,9 +148,6 @@ func UpdateProgressQuest(c *gin.Context) {
 	}
 
 	if len(userDoc) > 1 || len(userDoc) == 0 {
-		fmt.Println(len(userDoc))
-		fmt.Println(client.Collection("User").Doc(userID))
-
 		c.JSON(http.StatusBadGateway, gin.H{"message": "cant to get your quest"})
 		return
 	}
@@ -158,7 +157,7 @@ func UpdateProgressQuest(c *gin.Context) {
 
 	if dialyQuest.Quests != nil {
 		for index, _ := range dialyQuest.Quests {
-			if dialyQuest.Quests[index].QuestName == "LikeQuest" {
+			if dialyQuest.Quests[index].QuestName == "CommentQuest" {
 				// updat progess quest
 				if dialyQuest.Quests[index].Completed {
 					return
@@ -192,4 +191,74 @@ func UpdateProgressQuest(c *gin.Context) {
 
 	c.JSON(http.StatusOK, dialyQuest)
 	return
+}
+
+func GetPointFromQuest(c *gin.Context) {
+
+	// declare instance of firestore
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
+	// get all id to use
+	userID := c.Request.Header.Get("id")
+
+	// declare object to use
+	dialyQuest := models.DailyQuestProgress{}
+	questNameBody := c.Param("questName")
+	myPoint, err := strconv.Atoi(c.Param("myPoint"))
+
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"message": "cant to update user data quest"})
+		return
+	}
+	// check diary quest
+	questDoc, err := client.Collection("DialyQuest").Where("UserID", "==", client.Collection("User").Doc(userID)).Limit(1).Documents(ctx).GetAll()
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"message": "cant to update user data quest"})
+		return
+	}
+
+	if len(questDoc) > 1 || len(questDoc) == 0 {
+		c.JSON(http.StatusBadGateway, gin.H{"message": "cant to get your quest"})
+		return
+	}
+
+	// mapping data
+	mapstructure.Decode(questDoc[0].Data(), &dialyQuest)
+
+	getPoint := 0
+	// set to diary quest
+	for _, q := range dialyQuest.Quests {
+		if q.QuestName == questNameBody && q.IsGetPoint {
+			q.IsGetPoint = false
+			getPoint = q.Reward + myPoint
+			q.Reward = 0
+			if q.Progress == q.MaxProgress {
+				q.Completed = true
+				q.LastCompletion = time.Now().UTC()
+			}
+			break
+		}
+	}
+
+	// set diary quest
+	_, err = client.Collection("DialyQuest").Doc(questDoc[0].Ref.ID).Set(ctx, dialyQuest)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"message": "cant to update user data quest"})
+		return
+	}
+
+	// set to user collection
+	_, err = client.Collection("User").Doc(userID).Update(ctx, []firestore.Update{
+		{
+			Path:  "Point",
+			Value: getPoint,
+		},
+	})
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"message": "cant to update user data quest"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"point": getPoint})
 }
