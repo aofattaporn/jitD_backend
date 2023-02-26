@@ -203,12 +203,12 @@ func NamingPet(c *gin.Context) {
 			"message": "cant complete upddate data ",
 		})
 		return
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "naming data success",
-		})
-		return
 	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"petName": pet.PetName,
+	})
+	return
 }
 
 // Delete User

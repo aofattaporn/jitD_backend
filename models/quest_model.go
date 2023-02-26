@@ -15,6 +15,7 @@ type DailyQuestProgress struct {
 type Quest struct {
 	QuestName      string    `json:"questName"`
 	Progress       int       `json:"progress"`
+	CountGet       int       `json:"countGet"`
 	MaxProgress    int       `json:"maxProgress"`
 	Reward         int       `json:"reward"`
 	IsGetPoint     bool      `json:"isGetPoint"`

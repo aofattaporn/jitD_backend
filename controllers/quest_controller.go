@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	configs "jitD/configs"
 	"jitD/models"
 	"net/http"
@@ -28,9 +27,6 @@ func GetMyQuest(c *gin.Context) {
 	quest := models.DailyQuestProgress{}
 	today := time.Now().UTC().Day()
 
-	fmt.Println(uuid.NewUUID())
-	fmt.Println(uuid.NewRandom())
-
 	// check diary queest
 	questDoc, err := client.Collection("DialyQuest").Where("UserID", "==", client.Collection("User").Doc(userID)).Limit(1).Documents(ctx).GetAll()
 	if err != nil {
@@ -41,13 +37,14 @@ func GetMyQuest(c *gin.Context) {
 	// mapping data to object quest
 	if len(questDoc) < 1 {
 
-		// create quest
+		// case 1 not found quest qcreate quest
 		setQuest := []*models.Quest{}
 		questName := []string{"PostQuest", "CommentQuest", "LikeQuest"}
 		for _, name := range questName {
 			setQuest = append(setQuest, &models.Quest{
 				QuestName:      name,
 				Progress:       0,
+				CountGet:       0,
 				MaxProgress:    3,
 				Reward:         5,
 				IsGetPoint:     false,
@@ -56,24 +53,25 @@ func GetMyQuest(c *gin.Context) {
 			})
 		}
 
-		// set to diary quest
+		// set diary quest to collection
 		diaryQuest := models.DailyQuestProgress{
 			UserID:    client.Collection("User").Doc(userID),
 			QuestDate: time.Now().UTC(),
 			Quests:    setQuest,
 		}
 
-		// set data and return
+		// set diary quest to collection
 		_, err := client.Collection("DialyQuest").Doc(string(uuid.NewString())).Set(ctx, diaryQuest)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"message": "cant to update user data quest"})
 			return
 		}
 
+		// reutn quest that's already create quest
 		c.JSON(http.StatusOK, diaryQuest)
 		return
 
-		// case quest equal than 0 (no data)
+		// case quest equal 1
 	} else if len(questDoc) == 1 {
 
 		// case quest equal than 1
@@ -90,6 +88,7 @@ func GetMyQuest(c *gin.Context) {
 				setQuest = append(setQuest, &models.Quest{
 					QuestName:      name,
 					Progress:       0,
+					CountGet:       0,
 					MaxProgress:    3,
 					Reward:         5,
 					IsGetPoint:     false,
@@ -160,13 +159,16 @@ func UpdateProgressQuest(c *gin.Context) {
 			if dialyQuest.Quests[index].QuestName == "CommentQuest" {
 				// updat progess quest
 				if dialyQuest.Quests[index].Completed {
+					c.JSON(http.StatusOK, dialyQuest)
 					return
 				} else {
+
+					// case not complte
 					dialyQuest.Quests[index].Progress += 1
 
 					// set new reward
 					if dialyQuest.Quests[index].IsGetPoint {
-						dialyQuest.Quests[index].Reward = dialyQuest.Quests[index].Progress * 5
+						dialyQuest.Quests[index].Reward = (dialyQuest.Quests[index].Progress - dialyQuest.Quests[index].CountGet) * 5
 					} else {
 						dialyQuest.Quests[index].Reward = 5
 					}
@@ -232,7 +234,8 @@ func GetPointFromQuest(c *gin.Context) {
 		if q.QuestName == questNameBody && q.IsGetPoint {
 			q.IsGetPoint = false
 			getPoint = q.Reward + myPoint
-			q.Reward = 0
+			q.Reward = (q.Progress - q.CountGet) * 5
+			q.CountGet += 1
 			if q.Progress == q.MaxProgress {
 				q.Completed = true
 				q.LastCompletion = time.Now().UTC()
