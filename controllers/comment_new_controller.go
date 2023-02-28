@@ -228,7 +228,7 @@ func getCommentsResponse(post models.Post, client *firestore.Client, userID stri
 	for _, element := range post.Comment {
 		commentRes = &models.CommentResponse{}
 		mapstructure.Decode(element, &commentRes)
-		commentRes.UserId = client.Collection("User").Doc(userID).ID
+		commentRes.UserId = element.UserId
 		commentRes.PostId = client.Collection("Post").Doc(postID).ID
 		commentRes.CountLike = len(element.Like)
 		commentRes.Date = element.Date
