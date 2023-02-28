@@ -226,7 +226,7 @@ func UpdatePost(c *gin.Context) {
 		UserID:   post.UserID,
 		Content:  postUpdate.Content,
 		Date:     post.Date,
-		IsPublic: post.IsPublic,
+		IsPublic: postUpdate.IsPublic,
 		Category: postUpdate.Category,
 		Comment:  post.Comment,
 		LikesRef: post.LikesRef,
