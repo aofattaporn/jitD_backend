@@ -263,5 +263,5 @@ func GetPointFromQuest(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"point": getPoint})
+	c.JSON(http.StatusOK, dialyQuest)
 }
