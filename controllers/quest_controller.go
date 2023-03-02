@@ -146,7 +146,7 @@ func UpdateProgressQuest(c *gin.Context, questName string) {
 		return
 	}
 
-	if len(userDoc) > 1 || len(userDoc) == 0 {
+	if len(userDoc) > 1 {
 		c.JSON(http.StatusBadGateway, gin.H{"message": "cant to get your quest"})
 		return
 	}
@@ -262,6 +262,5 @@ func GetPointFromQuest(c *gin.Context) {
 		c.JSON(http.StatusBadGateway, gin.H{"message": "cant to update user data quest"})
 		return
 	}
-
-	c.JSON(http.StatusOK, dialyQuest)
+	return
 }
