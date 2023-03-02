@@ -262,5 +262,6 @@ func GetPointFromQuest(c *gin.Context) {
 		c.JSON(http.StatusBadGateway, gin.H{"message": "cant to update user data quest"})
 		return
 	}
-	return
+
+	c.JSON(http.StatusOK, dialyQuest)
 }
