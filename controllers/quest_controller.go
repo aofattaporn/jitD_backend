@@ -127,7 +127,7 @@ func GetMyQuest(c *gin.Context) {
 
 }
 
-func UpdateProgressQuest(c *gin.Context) {
+func UpdateProgressQuest(c *gin.Context, questName string) {
 
 	// declare instance of firestore
 	ctx := context.Background()
@@ -156,7 +156,7 @@ func UpdateProgressQuest(c *gin.Context) {
 
 	if dialyQuest.Quests != nil {
 		for index, _ := range dialyQuest.Quests {
-			if dialyQuest.Quests[index].QuestName == "CommentQuest" {
+			if dialyQuest.Quests[index].QuestName == questName {
 				// updat progess quest
 				if dialyQuest.Quests[index].Completed {
 					c.JSON(http.StatusOK, dialyQuest)

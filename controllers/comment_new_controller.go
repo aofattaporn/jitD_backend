@@ -54,6 +54,8 @@ func NewCreateComment(c *gin.Context) {
 		return
 	}
 
+	UpdateProgressQuest(c, "CommentQuest")
+
 	c.JSON(http.StatusOK, &models.CommentResponse{
 		UserId:    userID,
 		PostId:    postID,
