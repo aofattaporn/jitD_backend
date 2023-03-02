@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	configs "jitD/configs"
 	"jitD/models"
 	"net/http"
@@ -191,7 +192,6 @@ func UpdateProgressQuest(c *gin.Context, questName string) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dialyQuest)
 	return
 }
 
@@ -221,17 +221,18 @@ func GetPointFromQuest(c *gin.Context) {
 	}
 
 	if len(questDoc) > 1 || len(questDoc) == 0 {
-		c.JSON(http.StatusBadGateway, gin.H{"message": "cant to get your quest"})
+		fmt.Println(len(questDoc))
+		c.JSON(http.StatusBadGateway, gin.H{"message": "cant to get your quest llll"})
 		return
 	}
 
-	// mapping data
 	mapstructure.Decode(questDoc[0].Data(), &dialyQuest)
 
 	getPoint := 0
 	// set to diary quest
 	for _, q := range dialyQuest.Quests {
-		if q.QuestName == questNameBody && q.IsGetPoint {
+		if q.QuestName == questNameBody {
+
 			q.IsGetPoint = false
 			getPoint = q.Reward + myPoint
 			q.Reward = (q.Progress - q.CountGet) * 5
