@@ -160,7 +160,6 @@ func UpdateProgressQuest(c *gin.Context, questName string) {
 			if dialyQuest.Quests[index].QuestName == questName {
 				// updat progess quest
 				if dialyQuest.Quests[index].Completed {
-					c.JSON(http.StatusOK, dialyQuest)
 					return
 				} else {
 
