@@ -208,7 +208,6 @@ func NamingPet(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"petName": pet.PetName,
 	})
-	return
 }
 
 // Delete User

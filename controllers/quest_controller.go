@@ -190,8 +190,6 @@ func UpdateProgressQuest(c *gin.Context, questName string) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "update success"})
 		return
 	}
-
-	return
 }
 
 func GetPointFromQuest(c *gin.Context) {
