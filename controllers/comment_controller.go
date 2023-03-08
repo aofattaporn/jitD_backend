@@ -14,7 +14,7 @@ import (
 )
 
 // C (create comment)
-func NewCreateComment(c *gin.Context) {
+func CreateComment(c *gin.Context) {
 	// Get context and client
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
@@ -64,22 +64,13 @@ func NewCreateComment(c *gin.Context) {
 		CountLike: 0,
 		Date:      newComment.Date,
 		IsLike:    false,
+		IsPin:     false,
 	})
 
 }
 
-func checkISLike(userLike []*models.LikeComment, userID string) bool {
-	for _, lc := range userLike {
-		if lc.UserID == userID {
-			print("Like")
-			return true
-		}
-	}
-	return false
-}
-
 // R (read all comment by post id)
-func NewGetAllCommentByPostID(c *gin.Context) {
+func GetAllCommentByPostID(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 	postID := c.Param("post_id")
@@ -100,7 +91,7 @@ func NewGetAllCommentByPostID(c *gin.Context) {
 }
 
 // U (update a comment)
-func NewUpdateComment(c *gin.Context) {
+func UpdateComment(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
@@ -148,11 +139,12 @@ func NewUpdateComment(c *gin.Context) {
 		CountLike: len(post.Comment[indexUpdate].Like),
 		Date:      post.Comment[indexUpdate].Date,
 		IsLike:    false,
+		IsPin:     post.Comment[indexUpdate].IsPin,
 	})
 }
 
 // D (delete a comment)
-func NewDeleteComment(c *gin.Context) {
+func DeleteComment(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
@@ -195,8 +187,6 @@ func NewDeleteComment(c *gin.Context) {
 	c.JSON(http.StatusOK, deleteComment)
 }
 
-// this code about redundenc about code
-
 // getPost retrieves the post with the specified ID from Firestore.
 func getPost(ctx context.Context, client *firestore.Client, postID string) (*models.Post, error) {
 	doc, err := client.Collection("Post").Doc(postID).Get(ctx)
@@ -235,8 +225,19 @@ func getCommentsResponse(post models.Post, client *firestore.Client, userID stri
 		commentRes.CountLike = len(element.Like)
 		commentRes.Date = element.Date
 		commentRes.IsLike = checkISLike(element.Like, userID)
+		commentRes.IsPin = element.IsPin
+
 		commentsRes = append(commentsRes, *commentRes)
 	}
 
 	return commentsRes
+}
+
+func checkISLike(userLike []*models.LikeComment, userID string) bool {
+	for _, lc := range userLike {
+		if lc.UserID == userID {
+			return true
+		}
+	}
+	return false
 }

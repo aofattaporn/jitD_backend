@@ -8,43 +8,7 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
-	"github.com/mitchellh/mapstructure"
 )
-
-func AddBookmark(c *gin.Context) {
-
-	// declare instance of fiirestore
-	ctx := context.Background()
-	client := configs.CreateClient(ctx)
-
-	// get user data
-	var user models.User
-
-	// get id that's to use
-	userID := c.Request.Header.Get("id")
-	postID := c.Param("post_id")
-
-	// get user data from User collectiion
-	userDoc, err := client.Collection("User").Doc(userID).Get(ctx)
-	if err != nil {
-		// handle error
-	}
-	if err := mapstructure.Decode(userDoc.Data(), &user); err != nil {
-		// handle error
-	}
-
-	// check post to add bookmark is to be
-	postRef := client.Collection("Post").Doc(postID)
-
-	// get data to add
-	user.BookMark = append(user.BookMark, postRef)
-
-	// set user to collection
-	_, err = client.Collection("User").Doc(userID).Set(ctx, user)
-	if err != nil {
-		// handle error
-	}
-}
 
 func GetBookmarks(c *gin.Context) {
 
@@ -87,7 +51,7 @@ func GetBookmarks(c *gin.Context) {
 	}
 
 	// Decode post data from Firestore documents
-	var posts []models.PostResponse
+	posts := []models.PostResponse{}
 	for _, doc := range postDocs {
 		var post models.Post
 		if err := doc.DataTo(&post); err != nil {
@@ -117,7 +81,7 @@ func GetBookmarks(c *gin.Context) {
 	})
 }
 
-func AddBookmark2(c *gin.Context) {
+func AddBookmark(c *gin.Context) {
 
 	// declare instance of fiirestore
 	ctx := context.Background()
@@ -150,7 +114,7 @@ func AddBookmark2(c *gin.Context) {
 
 }
 
-func Remove2(c *gin.Context) {
+func Remove(c *gin.Context) {
 
 	// declare instance of fiirestore
 	ctx := context.Background()

@@ -12,6 +12,7 @@ type Comment struct {
 	PostId  *firestore.DocumentRef `json:"postId"`
 	Like    []*LikeComment         `json:"like,omitempty"`
 	Date    time.Time              `json:"date,omitempty"`
+	IsPin   bool                   `json:"isPin"`
 }
 
 type CommentResponse struct {
@@ -22,4 +23,5 @@ type CommentResponse struct {
 	CountLike int       `json:"countLike"`
 	Date      time.Time `json:"date,omitempty"`
 	IsLike    bool      `json:"isLike"`
+	IsPin     bool      `json:"isPin"`
 }
