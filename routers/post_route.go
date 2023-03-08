@@ -16,6 +16,4 @@ func PostRoutes(route *gin.Engine) {
 	v1.DELETE("/:post_id", controllers.DeleteMyPost)
 	v1.PUT("/:post_id", controllers.UpdatePost)
 
-	// v1.PUT("/x", controllers.AddBookmark)
-
 }

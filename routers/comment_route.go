@@ -15,4 +15,7 @@ func CommentRoutes(route *gin.Engine) {
 	v1.PUT("/:comment_id/post/:post_id/", controllers.UpdateComment)
 	v1.DELETE("/:comment_id/post/:post_id/", controllers.DeleteComment)
 
+	v1.PUT("/:comment_id/post/:post_id/pin", controllers.PinComment)
+	v1.PUT("/:comment_id/post/:post_id/unpin", controllers.UnPinComment)
+
 }
