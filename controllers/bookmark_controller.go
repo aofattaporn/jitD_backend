@@ -2,12 +2,14 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	configs "jitD/configs"
 	"jitD/models"
 	"net/http"
 
 	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
+	"github.com/mitchellh/mapstructure"
 )
 
 func GetBookmarks(c *gin.Context) {
@@ -29,19 +31,20 @@ func GetBookmarks(c *gin.Context) {
 		return
 	}
 
-	// Decode user data from Firestore document
 	var user models.User
-	if err := userDoc.DataTo(&user); err != nil {
+	// Decode user data from Firestore document
+	bookmarkRefs, ok := userDoc.Data()["Bookmark"].([]interface{})
+	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Failed to decode user data",
-			"error":   err.Error(),
+			"message": "Failed to retrieve bookmarked post references. Bookmark field not found in the user document.",
 		})
 		return
 	}
 
 	// Get bookmarked posts from Firestore
-	postRefs := user.BookMark
-	postDocs, err := client.GetAll(ctx, postRefs)
+	mapstructure.Decode(bookmarkRefs, &user.BookMark)
+
+	postDocs, err := client.GetAll(ctx, user.BookMark)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Failed to retrieve bookmarked posts",
@@ -52,7 +55,11 @@ func GetBookmarks(c *gin.Context) {
 
 	// Decode post data from Firestore documents
 	posts := []models.PostResponse{}
+	fmt.Println(len(postDocs))
+
 	for _, doc := range postDocs {
+		fmt.Println("post")
+
 		var post models.Post
 		if err := doc.DataTo(&post); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
