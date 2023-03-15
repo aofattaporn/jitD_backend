@@ -301,7 +301,7 @@ func UnLikeComment(c *gin.Context) {
 	// Find user's like for the comment
 	likeIndex := -1
 	for i, like := range post.Comment[index].Like {
-		if like.CommentID == commentID && like.UserID == userID {
+		if like.UserID == userID {
 			likeIndex = i
 			break
 		}

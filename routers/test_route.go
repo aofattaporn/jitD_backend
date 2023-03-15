@@ -12,4 +12,7 @@ func TestRoute(route *gin.Engine) {
 	v1Stress.POST("/", controllers.CreateSetTestStress)
 	v1Stress.GET("/", controllers.GetTestStress)
 
+	v1Stress.PUT("/result/point/:point", controllers.CalTestStress)
+	v1Stress.GET("/result", controllers.GetTestStressResult)
+
 }
