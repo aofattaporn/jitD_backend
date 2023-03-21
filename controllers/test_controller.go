@@ -281,7 +281,6 @@ func GetTestStressResult(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "cant to find result by this userID",
-			"error":   err.Error(),
 		})
 		return
 	}

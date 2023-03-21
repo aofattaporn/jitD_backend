@@ -41,6 +41,13 @@ func GetBookmarks(c *gin.Context) {
 		return
 	}
 
+	if len(bookmarkRefs) < 1 {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Successfully retrieved bookmarked posts",
+			"data":    []models.PostResponse{},
+		})
+	}
+
 	// Get bookmarked posts from Firestore
 	mapstructure.Decode(bookmarkRefs, &user.BookMark)
 
@@ -55,7 +62,6 @@ func GetBookmarks(c *gin.Context) {
 
 	// Decode post data from Firestore documents
 	posts := []models.PostResponse{}
-	fmt.Println(len(postDocs))
 
 	for _, doc := range postDocs {
 		fmt.Println("post")

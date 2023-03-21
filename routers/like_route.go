@@ -15,4 +15,6 @@ func LikeRoutes(route *gin.Engine) {
 	v1UnLike.PUT("/post/:post_id", controllers.UnlikePost)
 	v1UnLike.PUT("/comment/:comment_id/post/:post_id", controllers.UnLikeComment)
 
+	v1Like.GET("/post/catrogory", controllers.GetCatPopular)
+
 }

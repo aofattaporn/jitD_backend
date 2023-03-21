@@ -66,6 +66,27 @@ func SignIn(c *gin.Context) {
 	}
 }
 
+func SignInAdmin(c *gin.Context) {
+
+	// create client
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+	userID := c.Request.Header.Get("id")
+
+	_, err := client.Collection("User").Doc(userID).Get(ctx)
+	if err != nil {
+		log.Printf("An error has occurred: %s", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "you can not acess data",
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "you can access data",
+		})
+	}
+
+}
+
 // Create a User
 func SignInGoogle(c *gin.Context) {
 
@@ -144,6 +165,7 @@ func GetUserById(c *gin.Context) {
 
 	// Initialize user and user response
 	userRes := models.UserResponse{}
+	user := models.User{}
 
 	// Create Firestore client and context
 	ctx := context.Background()
@@ -160,13 +182,23 @@ func GetUserById(c *gin.Context) {
 	}
 
 	// Decode user document to user model
-	if err := dsnap.DataTo(&userRes); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Failed to decode user data",
-		})
-		return
-	}
+	mapstructure.Decode(dsnap.Data(), &user)
+	// if err := dsnap.DataTo(&userRes); err != nil {
+	// 	c.JSON(http.StatusBadRequest, gin.H{
+	// 		"message": "Failed to decode user data",
+	// 	})
+	// 	return
+	// }
+
 	userRes.UserID = userID
+	userRes.PetName = user.PetName
+	userRes.PetHP = user.PetHP
+	userRes.Point = user.PetHP
+	userRes.BookMark = []string{}
+
+	for _, element := range user.BookMark {
+		userRes.BookMark = append(userRes.BookMark, element.ID)
+	}
 
 	// Return user response
 	c.JSON(http.StatusOK, userRes)

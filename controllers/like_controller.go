@@ -330,58 +330,55 @@ func UnLikeComment(c *gin.Context) {
 	})
 }
 
-func LikePost2(c *gin.Context) {
-
-	// declare instance of fiirestore
+func GetCatPopular(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
-	// declare id to use in this function
-	userID := c.Request.Header.Get("id")
-	postID := c.Param("post_id")
-
-	// declare object to use in this function
-	var post models.Post
-
-	// crete like object for save to db
-	like := models.Like{
-		UserRef: client.Collection("User").Doc(userID),
-		PostRef: client.Collection("Post").Doc(postID),
-		Date:    time.Now().UTC(),
-	}
-
-	fmt.Printf("postID: %v\n", postID)
-
-	// save to post collection
-	postDoc, err := client.Collection("Post").Doc(postID).Get(ctx)
+	// Get the posts liked in the last 7 days
+	likeDocs, err := client.Collection("Like").Where("Date", ">", time.Now().AddDate(0, 0, -7)).Documents(ctx).GetAll()
 	if err != nil {
-		fmt.Println(err)
-		c.JSON(http.StatusOK, gin.H{
-			"message": "cant to get post by this id ก",
-		})
-		return
-	}
-	mapstructure.Decode(postDoc.Data(), &post)
-
-	// add to new data
-	_, _, err = client.Collection("Like").Add(ctx, like)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "cant to set like to like collection",
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to get liked posts",
 		})
 		return
 	}
 
-	post.LikesRef = append(post.LikesRef, &like)
-	_, err = client.Collection("Post").Doc(postID).Set(ctx, post)
+	// Extract the post references from the liked documents
+	postRefs := make([]*firestore.DocumentRef, len(likeDocs))
+	for i, likeDoc := range likeDocs {
+		like := models.Like{}
+		if err := likeDoc.DataTo(&like); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Failed to decode liked document",
+			})
+			return
+		}
+		postRefs[i] = like.PostRef
+	}
+
+	// Get the posts corresponding to the extracted post references
+	postDocs, err := client.GetAll(ctx, postRefs)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "cant to set like to like collection",
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to get posts",
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Post liked successfully",
-	})
+	// Count the number of posts per category
+	counts := make(map[string]int)
+	for _, postDoc := range postDocs {
+		post := models.Post{}
+		if err := postDoc.DataTo(&post); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Failed to decode post document",
+			})
+			return
+		}
+		for _, category := range post.Category {
+			counts[category]++
+		}
+	}
+
+	c.JSON(http.StatusOK, counts)
 }

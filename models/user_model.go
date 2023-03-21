@@ -14,7 +14,8 @@ type UserResponse struct {
 	UserID string `json:"userID"`
 	// data same a request
 	PetName       string   `json:"petName"`
-	Point         int      `json:"point"`
 	PetHP         int      `json:"petHP"`
+	Point         int      `json:"point"`
 	HistorySearch []string `json:"historySearch"`
+	BookMark      []string `json:"bookMark"`
 }
