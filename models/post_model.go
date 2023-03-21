@@ -32,4 +32,5 @@ type PostResponse struct {
 	CountComment int       `json:"countComment"`
 	CountLike    int       `json:"countLike"`
 	IsLike       bool      `json:"isLike"`
+	IsBookmark   bool      `json:"isBookmark"`
 }

@@ -348,6 +348,7 @@ func GetCatPopular(c *gin.Context) {
 	for i, likeDoc := range likeDocs {
 		like := models.Like{}
 		if err := likeDoc.DataTo(&like); err != nil {
+			fmt.Println(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": "Failed to decode liked document",
 			})
@@ -370,10 +371,7 @@ func GetCatPopular(c *gin.Context) {
 	for _, postDoc := range postDocs {
 		post := models.Post{}
 		if err := postDoc.DataTo(&post); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"message": "Failed to decode post document",
-			})
-			return
+			continue
 		}
 		for _, category := range post.Category {
 			counts[category]++

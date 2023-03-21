@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
 
 	"github.com/gin-gonic/gin"
@@ -25,6 +26,17 @@ func checkIsLikePost(postLike []*models.Like, userID string) bool {
 	return false
 }
 
+func checkIsBookMark(postID string, bookMark []*firestore.DocumentRef) bool {
+
+	for _, dr := range bookMark {
+		if dr.ID == postID {
+			return true
+		}
+	}
+	return false
+
+}
+
 // service get all post
 func GetAllPost(c *gin.Context) {
 
@@ -36,6 +48,8 @@ func GetAllPost(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
+	userData := models.User{}
+
 	// get all id to use
 	userID := c.Request.Header.Get("id")
 
@@ -44,6 +58,14 @@ func GetAllPost(c *gin.Context) {
 	if err != nil {
 		return
 	}
+
+	// get user data
+	userDoc, err := client.Collection("User").Doc(userID).Get(ctx)
+	if err != nil {
+		return
+	}
+
+	mapstructure.Decode(userDoc.Data(), &userData)
 
 	// loop data snap and decode data to post respone
 	for _, doc := range allDocSnap {
@@ -62,7 +84,7 @@ func GetAllPost(c *gin.Context) {
 		postRes.CountComment = len(post.Comment)
 		postRes.Category = post.Category
 		postRes.IsLike = checkIsLikePost(post.LikesRef, userID)
-
+		postRes.IsBookmark = checkIsBookMark(doc.Ref.ID, userData.BookMark)
 		posts = append(posts, postRes)
 	}
 
@@ -141,6 +163,7 @@ func GetMyPost(c *gin.Context) {
 	postRes := models.PostResponse{}
 	postsRes := []models.PostResponse{}
 	post := models.Post{}
+	userData := models.User{}
 
 	// get all post by have a userID == userID
 	allPostdocSnap, err := client.Collection("Post").Where("UserID", "==", client.Collection("User").Doc(userID)).Documents(ctx).GetAll()
@@ -149,6 +172,13 @@ func GetMyPost(c *gin.Context) {
 			"message": "cant get infomation",
 		})
 	}
+
+	// get user data
+	userDoc, err := client.Collection("User").Doc(userID).Get(ctx)
+	if err != nil {
+		return
+	}
+	mapstructure.Decode(userDoc.Data(), &userData)
 
 	// convert data each post snap to post object
 	for _, postDoc := range allPostdocSnap {
@@ -163,6 +193,7 @@ func GetMyPost(c *gin.Context) {
 		postRes.CountComment = len(post.Comment)
 		postRes.Category = post.Category
 		postRes.IsLike = checkIsLikePost(post.LikesRef, userID)
+		postRes.IsBookmark = checkIsBookMark(postDoc.Ref.ID, userData.BookMark)
 
 		postsRes = append(postsRes, postRes)
 	}
@@ -178,19 +209,36 @@ func DeleteMyPost(c *gin.Context) {
 	client := configs.CreateClient(ctx)
 
 	// declare all id to use
-	postId := c.Param("post_id")
+	postID := c.Param("post_id")
+	userID := c.Request.Header.Get("id")
 
 	// deelete post by user idd
-	_, err := client.Collection("Post").Doc(postId).Delete(ctx)
+	_, err := client.Collection("Post").Doc(postID).Delete(ctx)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found"})
 		return
 	}
 
+	// update the array field
+	_, err = client.Collection("User").Doc(userID).Update(ctx, []firestore.Update{
+		{
+			Path:  "Bookmark",
+			Value: firestore.ArrayRemove(client.Collection("Post").Doc(postID)),
+		},
+	})
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Failed to update bookmarked posts",
+			"error":   err.Error(),
+		})
+		return
+	}
+
 	// response status 200ok to client
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"message": "deleete success",
-		"postId":  postId,
+		"postId":  postID,
 	})
 }
 
@@ -348,18 +396,3 @@ func GetPostByCategorry(c *gin.Context) {
 	c.JSON(http.StatusOK, postsRes)
 
 }
-
-// LikePost creates a user like on a posts
-// func AddBookmark(c *gin.Context) {
-
-// 	// declare instance of fiirestore
-// 	ctx := context.Background()
-// 	client := configs.CreateClient(ctx)
-
-// 	// declare id to use in this function
-// 	userID := c.Request.Header.Get("id")
-// 	postID := c.Param("post_id")
-
-// 	client.Collection("User").Doc()
-
-// }

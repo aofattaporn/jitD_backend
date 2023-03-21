@@ -25,11 +25,10 @@ func CreateUser(c *gin.Context) {
 
 	// add data to document
 	_, err := client.Collection("User").Doc(userID).Set(ctx, models.User{
-		PetName:       "",
-		PetHP:         0,
-		Point:         0,
-		HistorySearch: []string{},
-		BookMark:      []*firestore.DocumentRef{},
+		PetName:  "",
+		PetHP:    0,
+		Point:    0,
+		BookMark: []*firestore.DocumentRef{},
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -102,11 +101,10 @@ func SignInGoogle(c *gin.Context) {
 	if user_err != nil {
 		if status.Code(user_err) == codes.NotFound {
 			_, err := client.Collection("User").Doc(user_id).Set(ctx, models.User{
-				PetName:       "",
-				PetHP:         0,
-				Point:         0,
-				HistorySearch: []string{},
-				BookMark:      []*firestore.DocumentRef{},
+				PetName:  "",
+				PetHP:    0,
+				Point:    0,
+				BookMark: []*firestore.DocumentRef{},
 			})
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
