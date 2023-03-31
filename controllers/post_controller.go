@@ -92,6 +92,209 @@ func GetAllPost(c *gin.Context) {
 	c.JSON(http.StatusOK, posts)
 }
 
+func GetAllPostHomePage(c *gin.Context) {
+
+	// declare data object
+	postsResByDate := []models.PostResponse{}
+	postResByLike := []models.PostResponse{}
+	postRes := models.PostResponse{}
+
+	// declare instance of firestore
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
+	// get all id to use
+	userID := c.Request.Header.Get("id")
+
+	// get all post by limit 10 result
+	userData := models.User{}
+
+	// get user data from userID
+	userDoc, err := client.Collection("User").Doc(userID).Get(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "failed to get user i",
+		})
+		return
+	}
+	mapstructure.Decode(userDoc.Data(), &userData)
+
+	// get data homepage case1 - orderbydate
+	postDateDoc, err := client.Collection("Post").Limit(10).OrderBy("Date", firestore.Asc).Documents(ctx).GetAll()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to get liked posts",
+		})
+		return
+	}
+
+	for _, doc := range postDateDoc {
+
+		post := models.Post{}
+		postRes.Category = []string{}
+		mapstructure.Decode(doc.Data(), &post)
+
+		// map data to seend to fronend
+		postRes.UserId = post.UserID.ID
+		postRes.PostId = doc.Ref.ID
+		postRes.Content = post.Content
+		postRes.Date = post.Date
+		postRes.IsPublic = post.IsPublic
+		postRes.CountLike = len(post.LikesRef)
+		postRes.CountComment = len(post.Comment)
+		postRes.Category = post.Category
+		postRes.IsLike = checkIsLikePost(post.LikesRef, userID)
+		postRes.IsBookmark = checkIsBookMark(doc.Ref.ID, userData.BookMark)
+		postsResByDate = append(postsResByDate, postRes)
+	}
+
+	// get data homepage case2 - orderLike
+	likeDocs, err := client.Collection("Like").Where("Date", ">", time.Now().AddDate(0, 0, -3)).Documents(ctx).GetAll()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to get liked posts",
+		})
+		return
+	}
+
+	// Extract the post references from the liked documents
+	postRefs := make([]*firestore.DocumentRef, len(likeDocs))
+	for i, likeDoc := range likeDocs {
+		like := models.Like{}
+		if err := likeDoc.DataTo(&like); err != nil {
+			fmt.Println(err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Failed to decode liked document",
+			})
+			return
+		}
+		postRefs[i] = like.PostRef
+	}
+
+	postLikeDocs, err := client.GetAll(ctx, postRefs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to get posts",
+		})
+		return
+	}
+
+	postRes = models.PostResponse{}
+	for _, doc := range postLikeDocs {
+
+		post := models.Post{}
+		postRes.Category = []string{}
+		mapstructure.Decode(doc.Data(), &post)
+
+		// map data to seend to fronend
+		postRes.UserId = doc.Ref.ID
+		postRes.PostId = doc.Ref.ID
+		postRes.Content = post.Content
+		postRes.Date = post.Date
+		postRes.IsPublic = post.IsPublic
+		postRes.CountLike = len(post.LikesRef)
+		postRes.CountComment = len(post.Comment)
+		postRes.Category = post.Category
+		postRes.IsLike = checkIsLikePost(post.LikesRef, userID)
+		postRes.IsBookmark = checkIsBookMark(doc.Ref.ID, userData.BookMark)
+		postResByLike = append(postResByLike, postRes)
+	}
+
+	if len(postResByLike) < 10 {
+		for _, post := range postsResByDate {
+			postResByLike = append(postResByLike, post)
+		}
+	}
+
+	// return json status code 200
+	c.JSON(http.StatusOK, map[string]interface{}{
+		"postDate":       postsResByDate,
+		"postLike":       postResByLike,
+		"postReccommend": postsResByDate,
+	})
+}
+
+// service post by like
+func GetPostByLikeIndividual(c *gin.Context) {
+
+	// declare data object
+	posts := []models.PostResponse{}
+	postRes := models.PostResponse{}
+	userData := models.User{}
+
+	// get all id to use
+	userID := c.Request.Header.Get("id")
+
+	//
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
+	// Get the posts liked in the last 7 days
+	likeDocs, err := client.Collection("Like").Where("Date", ">", time.Now().AddDate(0, 0, -7)).Documents(ctx).GetAll()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to get liked posts",
+		})
+		return
+	}
+
+	// Extract the post references from the liked documents
+	postRefs := make([]*firestore.DocumentRef, len(likeDocs))
+	for i, likeDoc := range likeDocs {
+		like := models.Like{}
+		if err := likeDoc.DataTo(&like); err != nil {
+			fmt.Println(err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Failed to decode liked document",
+			})
+			return
+		}
+		postRefs[i] = like.PostRef
+	}
+
+	// get user data
+	userDoc, err := client.Collection("User").Doc(userID).Get(ctx)
+	if err != nil {
+		return
+	}
+
+	mapstructure.Decode(userDoc.Data(), &userData)
+
+	// Get the posts corresponding to the extracted post references
+	postDocs, err := client.GetAll(ctx, postRefs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to get posts",
+		})
+		return
+	}
+	mapstructure.Decode(userDoc.Data(), &userData)
+
+	// loop data snap and decode data to post respone
+	for _, doc := range postDocs {
+
+		post := models.Post{}
+		postRes.Category = []string{}
+		mapstructure.Decode(doc.Data(), &post)
+
+		// map data to seend to fronend
+		postRes.UserId = post.UserID.ID
+		postRes.PostId = doc.Ref.ID
+		postRes.Content = post.Content
+		postRes.Date = post.Date
+		postRes.IsPublic = post.IsPublic
+		postRes.CountLike = len(post.LikesRef)
+		postRes.CountComment = len(post.Comment)
+		postRes.Category = post.Category
+		postRes.IsLike = checkIsLikePost(post.LikesRef, userID)
+		postRes.IsBookmark = checkIsBookMark(doc.Ref.ID, userData.BookMark)
+		posts = append(posts, postRes)
+	}
+
+	// return json status code 200
+	c.JSON(http.StatusOK, posts)
+}
+
 // service create post
 func CreatePost(c *gin.Context) {
 

@@ -258,6 +258,7 @@ func LikeComment(c *gin.Context) {
 	})
 }
 
+// Unliike commeent
 func UnLikeComment(c *gin.Context) {
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
@@ -331,11 +332,13 @@ func UnLikeComment(c *gin.Context) {
 }
 
 func GetCatPopular(c *gin.Context) {
+
+	// create instance for use instance
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
 	// Get the posts liked in the last 7 days
-	likeDocs, err := client.Collection("Like").Where("Date", ">", time.Now().AddDate(0, 0, -7)).Documents(ctx).GetAll()
+	likeDocs, err := client.Collection("Like").Where("Date", ">", time.Now().AddDate(0, 0, -1)).Documents(ctx).GetAll()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Failed to get liked posts",

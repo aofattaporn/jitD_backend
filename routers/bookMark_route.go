@@ -1,7 +1,7 @@
 package routers
 
 import (
-	"jitD/controllers"
+	controllers "jitD/controllers"
 
 	"github.com/gin-gonic/gin"
 )
