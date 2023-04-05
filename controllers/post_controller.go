@@ -203,14 +203,24 @@ func GetAllPostHomePage(c *gin.Context) {
 	}
 
 	postRes = models.PostResponse{}
+
+	fmt.Println(postLikeDocs)
+
+	for _, v := range postLikeDocs {
+		fmt.Println(v.Ref.ID)
+	}
+
 	for _, doc := range postLikeDocs {
 
 		post := models.Post{}
 		postRes.Category = []string{}
+
+		if doc.Data() == nil {
+			continue
+		}
 		mapstructure.Decode(doc.Data(), &post)
 
-		// map data to seend to fronend
-		postRes.UserId = doc.Ref.ID
+		postRes.UserId = post.UserID.ID
 		postRes.PostId = doc.Ref.ID
 		postRes.Content = post.Content
 		postRes.Date = post.Date
