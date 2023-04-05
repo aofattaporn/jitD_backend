@@ -370,16 +370,38 @@ func GetCatPopular(c *gin.Context) {
 	}
 
 	// Count the number of posts per category
-	counts := make(map[string]int)
+	catCounts := make(map[string]int)
 	for _, postDoc := range postDocs {
 		post := models.Post{}
 		if err := postDoc.DataTo(&post); err != nil {
 			continue
 		}
-		for _, category := range post.Category {
-			counts[category]++
+		for _, cat := range post.Category {
+			catCounts[cat]++
 		}
 	}
 
-	c.JSON(http.StatusOK, counts)
+	// Create a slice of CateTest objects to hold the category counts
+	type CateTest struct {
+		CatName string `json:"catName"`
+		Count   int    `json:"count"`
+	}
+	catMock := []string{
+		"การเรียน",
+		"การงาน",
+		"สุขภาพจิต",
+		"ปัญหาชีวิต",
+		"ความสัมพันธ์",
+		"ครอบครัว",
+		"สุขภาพร่างกาย",
+	}
+	catCountsTest := make([]CateTest, len(catMock))
+	for i, cat := range catMock {
+		catCountsTest[i] = CateTest{
+			CatName: cat,
+			Count:   catCounts[cat],
+		}
+	}
+
+	c.JSON(http.StatusOK, catCountsTest)
 }

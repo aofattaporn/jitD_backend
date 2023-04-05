@@ -60,7 +60,7 @@ func CreateCheckAuth(ctx context.Context, c *gin.Context, x string) {
 		})
 		c.Abort()
 	} else {
-		fmt.Printf("token.UID: %v\n", token.UID)
+		// fmt.Printf("token.UID: %v\n", token.UID)
 		c.Request.Header.Add("id", token.UID)
 		c.Next()
 	}
@@ -81,8 +81,17 @@ func Verify(c *gin.Context) {
 		reqToken := splitToken[1]
 
 		// fmt.Printf("reqToken: %v\n", reqToken)
-
 		CreateCheckAuth(c, c, reqToken)
 
 	}
+}
+
+func CORSMiddleware(c *gin.Context) {
+	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+	c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+	c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+	c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
+
+	c.Next()
+
 }

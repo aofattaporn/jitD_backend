@@ -67,6 +67,29 @@ func GetAllPost(c *gin.Context) {
 
 	mapstructure.Decode(userDoc.Data(), &userData)
 
+	var user models.User
+	// Decode user data from Firestore document
+	bookmarkRefs, ok := userDoc.Data()["Bookmark"].([]interface{})
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Failed to retrieve bookmarked post references. Bookmark field not found in the user document.",
+		})
+		return
+	}
+
+	mapstructure.Decode(userDoc.Data(), &user)
+
+	if len(bookmarkRefs) < 1 {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Successfully retrieved bookmarked posts",
+			"data":    []models.PostResponse{},
+		})
+		return
+	}
+
+	// Get bookmarked posts from Firestore
+	mapstructure.Decode(bookmarkRefs, &user.BookMark)
+
 	// loop data snap and decode data to post respone
 	for _, doc := range allDocSnap {
 
