@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	configs "jitD/configs"
+	"jitD/controllers"
 	routes "jitD/routers"
 
 	"github.com/gin-gonic/gin"
@@ -9,6 +11,10 @@ import (
 
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+
+		fmt.Println("========================")
+		fmt.Println(c.Request.Header)
+		fmt.Println("========================")
 
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Credentials", "true")
@@ -24,11 +30,16 @@ func CORSMiddleware() gin.HandlerFunc {
 	}
 }
 
+type Data struct {
+	value string
+}
+
 func main() {
 
 	// initail route
 	router := gin.Default()
 
+	controllers.ReccomendPost()
 	// use middleware
 	router.Use(CORSMiddleware())
 	router.Use(configs.Verify)
@@ -40,6 +51,7 @@ func main() {
 	routes.LikeRoutes(router)
 	routes.BookMarkRoutes(router)
 	routes.TestRoute(router)
+
 	routes.MockingRoute(router)
 
 	// configue on port 3000
