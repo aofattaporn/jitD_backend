@@ -2,69 +2,77 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	configs "jitD/configs"
 	models "jitD/models"
-	"log"
 	"net/http"
 
 	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
-	mapstructure "github.com/mitchellh/mapstructure"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// Create a User
+// * Create a User
 func CreateUser(c *gin.Context) {
 
 	// create client
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
+	defer client.Close()
 	userID := c.Request.Header.Get("id")
 
-	// add data to document
-	_, err := client.Collection("User").Doc(userID).Set(ctx, models.User{
-		PetName:  "",
-		PetHP:    0,
+	// create user document
+	user := models.User{
+		UserID:   userID,
+		PetName:  "my bear",
+		PetHP:    100,
 		Point:    0,
+		IsAdmin:  false,
 		BookMark: []*firestore.DocumentRef{},
-	})
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "cant to set user to DB ",
+	}
+
+	// create a user infomation
+	if _, err := client.Collection("User").Doc(userID).Set(ctx, user); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "unable to create user document",
 		})
 		return
 	}
 
+	// TODO: create a test infomation
+
+	// TODO: create a quest infomation
+
+	// respond to client
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "createdata success",
+		"message": "user created successfully",
 	})
 }
 
-// Create a User
+// *signin a user
 func SignIn(c *gin.Context) {
 
 	// create client
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
-	user_id := c.Request.Header.Get("id")
+	defer client.Close()
+	userID := c.Request.Header.Get("id")
 
 	// add data to document
-	fmt.Printf("header: %v\n", user_id)
-	_, err := client.Collection("User").Doc(user_id).Get(ctx)
+	_, err := client.Collection("User").Doc(userID).Get(ctx)
 	if err != nil {
-		log.Printf("An error has occurred: %s", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "you can not acess data",
 		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "you can acess data",
-		})
 	}
+
+	// response status to clieint
+	c.JSON(http.StatusOK, gin.H{
+		"message": "signin user success",
+	})
 }
 
+// *signin a user for check admin role
 func SignInAdmin(c *gin.Context) {
 
 	// create client
@@ -72,21 +80,21 @@ func SignInAdmin(c *gin.Context) {
 	client := configs.CreateClient(ctx)
 	userID := c.Request.Header.Get("id")
 
+	// add data to document
 	_, err := client.Collection("User").Doc(userID).Get(ctx)
 	if err != nil {
-		log.Printf("An error has occurred: %s", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "you can not acess data",
 		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "you can access data",
-		})
 	}
 
+	// response status to clieint
+	c.JSON(http.StatusOK, gin.H{
+		"message": "signin user success",
+	})
 }
 
-// Create a User
+// *signin a user with google
 func SignInGoogle(c *gin.Context) {
 
 	// create client
@@ -94,16 +102,18 @@ func SignInGoogle(c *gin.Context) {
 	client := configs.CreateClient(ctx)
 
 	// delcare id for use in function
-	user_id := c.Request.Header.Get("id")
+	userID := c.Request.Header.Get("id")
 
 	// get a user
-	_, user_err := client.Collection("User").Doc(user_id).Get(ctx)
+	_, user_err := client.Collection("User").Doc(userID).Get(ctx)
 	if user_err != nil {
 		if status.Code(user_err) == codes.NotFound {
-			_, err := client.Collection("User").Doc(user_id).Set(ctx, models.User{
-				PetName:  "",
-				PetHP:    0,
+			_, err := client.Collection("User").Doc(userID).Set(ctx, models.User{
+				UserID:   userID,
+				PetName:  "my bear",
+				PetHP:    100,
 				Point:    0,
+				IsAdmin:  false,
 				BookMark: []*firestore.DocumentRef{},
 			})
 			if err != nil {
@@ -131,116 +141,122 @@ func SignInGoogle(c *gin.Context) {
 	}
 }
 
-// Get all user
+// *Get all user
 func GetAllUser(c *gin.Context) {
 
-	users := []models.User{}
-	// dialyQuest := models.DailyQuestProgress{}
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
+	defer client.Close()
 
-	// retrieve all user
-	userSnap, err := client.Collection("User").Documents(ctx).GetAll()
+	// retrieve all users
+	userDocs, err := client.Collection("User").Documents(ctx).GetAll()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "cant get infomation",
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "unable to get user documents",
 		})
+		return
 	}
 
-	// maping data to user model
-	for _, element := range userSnap {
-		user := models.User{}
-		mapstructure.Decode(element.Data(), &user)
-		users = append(users, user)
+	// extract user data from documents
+	users := make([]models.User, len(userDocs))
+	for i, doc := range userDocs {
+		if err := doc.DataTo(&users[i]); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "unable to extract user data",
+			})
+			return
+		}
 	}
+
+	// respond to client
 	c.JSON(http.StatusOK, users)
 }
 
-// Get user by id
+// *Get user by id
 func GetUserById(c *gin.Context) {
 	// Get user ID from the header
 	userID := c.Request.Header.Get("id")
 
-	// Initialize user and user response
-	userRes := models.UserResponse{}
-	user := models.User{}
-
 	// Create Firestore client and context
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
+	defer client.Close()
 
-	// Get user document by ID
+	// get user document by ID
 	docRef := client.Collection("User").Doc(userID)
-	dsnap, err := docRef.Get(ctx)
+	userSnap, err := docRef.Get(ctx)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Failed to retrieve user information",
+			"message": "unable to retrieve user information",
 		})
 		return
 	}
 
-	// Decode user document to user model
-	mapstructure.Decode(dsnap.Data(), &user)
-	// if err := dsnap.DataTo(&userRes); err != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{
-	// 		"message": "Failed to decode user data",
-	// 	})
-	// 	return
-	// }
-
-	userRes.UserID = userID
-	userRes.PetName = user.PetName
-	userRes.PetHP = user.PetHP
-	userRes.Point = user.PetHP
-	userRes.BookMark = []string{}
-
-	for _, element := range user.BookMark {
-		userRes.BookMark = append(userRes.BookMark, element.ID)
+	// extract user data from document
+	var user models.User
+	if err := userSnap.DataTo(&user); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "unable to extract user data",
+		})
+		return
 	}
 
-	// Return user response
+	// construct user response
+	userRes := models.UserResponse{
+		UserID:   user.UserID,
+		PetName:  user.PetName,
+		PetHP:    user.PetHP,
+		Point:    user.Point,
+		BookMark: make([]string, len(user.BookMark)),
+	}
+	for i, ref := range user.BookMark {
+		userRes.BookMark[i] = ref.ID
+	}
+
+	// respond to client
 	c.JSON(http.StatusOK, userRes)
 }
 
-// naming a pet
+// *naming a pet
 func NamingPet(c *gin.Context) {
 
-	id := c.Request.Header.Get("id")
-	pet := models.User{}
+	// Get user ID from the header
+	userID := c.Request.Header.Get("id")
+
+	// Parse the pet name from the request body
+	var requestBody struct {
+		PetName string `json:"petName"`
+	}
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Failed to parse request body",
+		})
+		return
+	}
+
+	// Update the user's pet name in the database
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
-
-	// mapping data form body
-	if err := c.BindJSON(&pet); err != nil {
-		log.Fatalln(err)
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "cant get body from you ",
-		})
-		return
-	}
-
-	// set data to DB
-	_, err := client.Collection("User").Doc(id).Update(ctx, []firestore.Update{
+	docRef := client.Collection("User").Doc(userID)
+	if _, err := docRef.Update(ctx, []firestore.Update{
 		{
 			Path:  "PetName",
-			Value: pet.PetName,
+			Value: requestBody.PetName,
 		},
-	})
-
-	if err != nil {
-		log.Fatal(err)
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "cant complete upddate data ",
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to update pet name",
 		})
 		return
 	}
 
+	// Return the new pet name
 	c.JSON(http.StatusOK, gin.H{
-		"petName": pet.PetName,
+		"petName": requestBody.PetName,
 	})
 }
 
-// Delete User
+// *Delete User
 func DeleteUser(c *gin.Context) {
 
 	id := c.Request.Header.Get("id")
@@ -255,5 +271,3 @@ func DeleteUser(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, dsnap.UpdateTime)
 }
-
-// update user
