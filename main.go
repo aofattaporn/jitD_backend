@@ -51,6 +51,7 @@ func main() {
 	routes.LikeRoutes(router)
 	routes.BookMarkRoutes(router)
 	routes.TestRoute(router)
+	routes.ReportRoutes(router)
 
 	routes.MockingRoute(router)
 
