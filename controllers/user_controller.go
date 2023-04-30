@@ -5,6 +5,7 @@ import (
 	configs "jitD/configs"
 	models "jitD/models"
 	"net/http"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
@@ -23,12 +24,15 @@ func CreateUser(c *gin.Context) {
 
 	// create user document
 	user := models.User{
-		UserID:   userID,
-		PetName:  "my bear",
-		PetHP:    100,
-		Point:    0,
-		IsAdmin:  false,
-		BookMark: []*firestore.DocumentRef{},
+		UserID:       userID,
+		PetName:      "my bear",
+		PetHP:        100,
+		Point:        0,
+		IsAdmin:      false,
+		FCMToken:     "",
+		BookMark:     []*firestore.DocumentRef{},
+		Notification: []*models.Notification{},
+		RegisterDate: time.Now().UTC(),
 	}
 
 	// create a user infomation
@@ -40,12 +44,41 @@ func CreateUser(c *gin.Context) {
 	}
 
 	// TODO: create a test infomation
+	_, _, err := client.Collection("ResultStress").Add(ctx, models.TestResualt{
+		UserID:   client.Collection("User").Doc(userID),
+		TestDate: time.Now().UTC(),
+		TestName: "Test Stress",
+		Point:    0,
+		Result:   "No data",
+		Desc:     "please to do this test",
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "unable to create user document",
+		})
+		return
+	}
 
 	// TODO: create a quest infomation
+	_, _, err = client.Collection("ResultConsult").Add(ctx, models.TestResualt{
+		UserID:   client.Collection("User").Doc(userID),
+		TestDate: time.Now().UTC(),
+		TestName: "Test Consult",
+		Point:    0,
+		Result:   "No data",
+		Desc:     "please to do this test",
+	})
 
-	// respond to client
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "user created successfully",
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "unable to create user document",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "create a user succsess fully",
 	})
 }
 
@@ -109,21 +142,51 @@ func SignInGoogle(c *gin.Context) {
 	if user_err != nil {
 		if status.Code(user_err) == codes.NotFound {
 			_, err := client.Collection("User").Doc(userID).Set(ctx, models.User{
-				UserID:   userID,
-				PetName:  "my bear",
-				PetHP:    100,
-				Point:    0,
-				IsAdmin:  false,
-				BookMark: []*firestore.DocumentRef{},
+				UserID:       userID,
+				PetName:      "my bear",
+				PetHP:        100,
+				Point:        0,
+				IsAdmin:      false,
+				FCMToken:     "",
+				BookMark:     []*firestore.DocumentRef{},
+				Notification: []*models.Notification{},
+				RegisterDate: time.Now().UTC(),
 			})
+
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"message": "Cant to set data",
 				})
 				return
 			} else {
+				// TODO: create a test infomation
+				_, _, err := client.Collection("ResultStress").Add(ctx, models.TestResualt{
+					UserID:   client.Collection("User").Doc(userID),
+					TestDate: time.Now().UTC(),
+					TestName: "Test Stress",
+					Point:    0,
+					Result:   "No data",
+					Desc:     "please to do this test",
+				})
+
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{
+						"message": "unable to create user document",
+					})
+					return
+				}
+
+				// TODO: create a quest infomation
+				_, _, err = client.Collection("ResultConsult").Add(ctx, models.TestResualt{
+					UserID:   client.Collection("User").Doc(userID),
+					TestDate: time.Now().UTC(),
+					TestName: "Test Consult",
+					Point:    0,
+					Result:   "No data",
+					Desc:     "please to do this test",
+				})
 				c.JSON(http.StatusCreated, gin.H{
-					"message": "something wronng",
+					"message": "create succcess",
 				})
 				return
 			}
