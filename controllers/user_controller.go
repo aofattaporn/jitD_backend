@@ -19,7 +19,6 @@ func CreateUser(c *gin.Context) {
 	// create client
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
-	defer client.Close()
 	userID := c.Request.Header.Get("id")
 
 	// create user document
@@ -77,7 +76,7 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusCreated, gin.H{
 		"message": "create a user succsess fully",
 	})
 }
