@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	configs "jitD/configs"
 	"jitD/controllers"
 	routes "jitD/routers"
@@ -11,11 +10,6 @@ import (
 
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
-		fmt.Println("========================")
-		fmt.Println(c.Request.Header)
-		fmt.Println("========================")
-
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Credentials", "true")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
