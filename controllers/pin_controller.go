@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// pin comment
+// *pin comment
 func PinComment(c *gin.Context) {
 
 	// declare instance of fiirestore
@@ -64,7 +64,7 @@ func PinComment(c *gin.Context) {
 	})
 }
 
-// pin comment
+// *pin comment
 func UnPinComment(c *gin.Context) {
 
 	// declare instance of fiirestore

@@ -87,7 +87,7 @@ func GetBookmarks(c *gin.Context) {
 			Category:     post.Category,
 			CountComment: len(post.Comment),
 			CountLike:    len(post.LikesRef),
-			IsLike:       checkIsLikePost(post.LikesRef, userID),
+			IsLike:       checkIsLikePost(userID, post.LikesRef),
 			IsBookmark:   checkIsBookMark(doc.Ref.ID, user.BookMark),
 		})
 	}

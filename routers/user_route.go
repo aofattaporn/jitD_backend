@@ -14,8 +14,6 @@ func UserRoute(route *gin.Engine) {
 	v1.POST("/signIn/google", controllers.SignInGoogle)
 	v1.GET("/id", controllers.GetUserById)
 	v1.PUT("/pet/id", controllers.NamingPet)
-
-	// # -------------- unsuse ---------------
 	v1.DELETE("/id", controllers.DeleteUser)
 
 }

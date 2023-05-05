@@ -7,6 +7,13 @@ type Post struct {
 }
 
 func ReccomendPost() {
+
+	// TODO : Get like informaton and anlysis
+
+	// TODO : calculate on all post
+	// TODO :  1 - tranfer all post to spot
+	// TODO :  2 - callculate all spot
+
 	// // Generate some example posts
 	// var posts []*Post
 	// for i := 1; i <= 10; i++ {

@@ -10,14 +10,13 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
-	"google.golang.org/api/iterator"
 
 	"github.com/gin-gonic/gin"
 	mapstructure "github.com/mitchellh/mapstructure"
 )
 
-// check isLike from post like ref
-func checkIsLikePost(postLike []*models.Like, userID string) bool {
+// ?check isLike from post like ref
+func checkIsLikePost(userID string, postLike []*models.Like) bool {
 	for _, l := range postLike {
 		if l.UserRef.ID == userID {
 			return true
@@ -26,96 +25,72 @@ func checkIsLikePost(postLike []*models.Like, userID string) bool {
 	return false
 }
 
+// ?check isBookmark from post like ref
 func checkIsBookMark(postID string, bookMark []*firestore.DocumentRef) bool {
-
 	for _, dr := range bookMark {
 		if dr.ID == postID {
 			return true
 		}
 	}
 	return false
-
 }
 
-// service get all post
-func GetAllPost(c *gin.Context) {
-
-	// declare data object
-	posts := []models.PostResponse{}
-	postRes := models.PostResponse{}
-
-	// declare instance of firestore
-	ctx := context.Background()
-	client := configs.CreateClient(ctx)
-
-	userData := models.User{}
-
-	// get all id to use
-	userID := c.Request.Header.Get("id")
-
-	// get all post by limit 10 result
-	allDocSnap, err := client.Collection("Post").Limit(10).Documents(ctx).GetAll()
+// ?getUserData returns the user data for the given user ID
+func getUserData(client *firestore.Client, userID string) (models.User, error) {
+	userDoc, err := client.Collection("User").Doc(userID).Get(context.Background())
 	if err != nil {
-		return
+		return models.User{}, err
 	}
-
-	// get user data
-	userDoc, err := client.Collection("User").Doc(userID).Get(ctx)
+	var userData models.User
+	err = userDoc.DataTo(&userData)
 	if err != nil {
-		return
+		return models.User{}, err
 	}
-
-	mapstructure.Decode(userDoc.Data(), &userData)
-
-	var user models.User
-	// Decode user data from Firestore document
-	bookmarkRefs, ok := userDoc.Data()["Bookmark"].([]interface{})
-	if !ok {
-		// c.JSON(http.StatusBadRequest, gin.H{
-		// 	"message": "Failed to retrieve bookmarked post references. Bookmark field not found in the user document.",
-		// })
-		// return
-	}
-
-	mapstructure.Decode(userDoc.Data(), &user)
-
-	if len(bookmarkRefs) > 0 {
-		// c.JSON(http.StatusOK, gin.H{
-		// 	"message": "Successfully retrieved bookmarked posts",
-		// 	"data":    []models.PostResponse{},
-		// })
-		// return
-		// Get bookmarked posts from Firestore
-		mapstructure.Decode(bookmarkRefs, &user.BookMark)
-	} else {
-		// Get bookmarked posts from Firestore
-		mapstructure.Decode([]*firestore.DocumentRef{}, &user.BookMark)
-	}
-
-	// loop data snap and decode data to post respone
-	for _, doc := range allDocSnap {
-
-		post := models.Post{}
-		postRes.Category = []string{}
-		mapstructure.Decode(doc.Data(), &post)
-
-		// map data to seend to fronend
-		postRes.UserId = post.UserID.ID
-		postRes.PostId = doc.Ref.ID
-		postRes.Content = post.Content
-		postRes.Date = post.Date
-		postRes.IsPublic = post.IsPublic
-		postRes.CountLike = len(post.LikesRef)
-		postRes.CountComment = len(post.Comment)
-		postRes.Category = post.Category
-		postRes.IsLike = checkIsLikePost(post.LikesRef, userID)
-		postRes.IsBookmark = checkIsBookMark(doc.Ref.ID, userData.BookMark)
-		posts = append(posts, postRes)
-	}
-
-	// return json status code 200
-	c.JSON(http.StatusOK, posts)
+	return userData, nil
 }
+
+// ?getAllPosts returns all posts sorted by date in descending order
+func getAllPosts(client *firestore.Client, userID string, userData models.User) ([]models.PostResponse, error) {
+	var postResponses []models.PostResponse
+
+	postsSnap, err := client.Collection("Post").OrderBy("Date", firestore.Desc).Documents(context.Background()).GetAll()
+	if err != nil {
+		return nil, err
+	}
+	for _, doc := range postsSnap {
+		var post models.Post
+		err := doc.DataTo(&post)
+		if err != nil {
+			return nil, err
+		}
+
+		// convertPostToResponse
+		postResponse := convertPostToResponse(post, userID, userData, doc.Ref.ID)
+		postResponses = append(postResponses, postResponse)
+	}
+	return postResponses, nil
+}
+
+// ?convertPostToResponse converts a post to a post response object
+func convertPostToResponse(post models.Post, userID string, userData models.User, postID string) models.PostResponse {
+	postResponse := models.PostResponse{
+		PostId:       postID,
+		Content:      post.Content,
+		Date:         post.Date,
+		IsPublic:     post.IsPublic,
+		Category:     post.Category,
+		CountLike:    len(post.LikesRef),
+		CountComment: len(post.Comment),
+		IsLike:       checkIsLikePost(userID, post.LikesRef),
+		IsBookmark:   checkIsBookMark(postID, userData.BookMark),
+	}
+	if post.UserID != nil {
+		postResponse.UserId = post.UserID.ID
+	}
+	return postResponse
+}
+
+// ----------------------------------------------------------
 
 func GetAllPostHomePage(c *gin.Context) {
 
@@ -168,7 +143,7 @@ func GetAllPostHomePage(c *gin.Context) {
 		postRes.CountLike = len(post.LikesRef)
 		postRes.CountComment = len(post.Comment)
 		postRes.Category = post.Category
-		postRes.IsLike = checkIsLikePost(post.LikesRef, userID)
+		postRes.IsLike = checkIsLikePost(userID, post.LikesRef)
 		postRes.IsBookmark = checkIsBookMark(doc.Ref.ID, userData.BookMark)
 		postsResByDate = append(postsResByDate, postRes)
 	}
@@ -230,7 +205,7 @@ func GetAllPostHomePage(c *gin.Context) {
 		postRes.CountLike = len(post.LikesRef)
 		postRes.CountComment = len(post.Comment)
 		postRes.Category = post.Category
-		postRes.IsLike = checkIsLikePost(post.LikesRef, userID)
+		postRes.IsLike = checkIsLikePost(userID, post.LikesRef)
 		postRes.IsBookmark = checkIsBookMark(doc.Ref.ID, userData.BookMark)
 		postResByLike = append(postResByLike, postRes)
 	}
@@ -249,18 +224,44 @@ func GetAllPostHomePage(c *gin.Context) {
 	})
 }
 
-// service post by like
+// *service get all post
+func GetAllNewPost(c *gin.Context) {
+	// Get user ID from request header
+	userID := c.Request.Header.Get("id")
+
+	// Get Firestore client
+	ctx := context.Background()
+	client := configs.CreateClient(ctx)
+
+	// Get user data
+	userData, err := getUserData(client, userID)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	// Get all posts
+	postResponses, err := getAllPosts(client, userID, userData)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	// Return posts
+	c.JSON(http.StatusOK, postResponses)
+}
+
+// *service post by like
 func GetPostByLikeIndividual(c *gin.Context) {
 
 	// declare data object
-	posts := []models.PostResponse{}
-	postRes := models.PostResponse{}
-	userData := models.User{}
+	postResponse := models.PostResponse{}
+	postResponses := []models.PostResponse{}
 
 	// get all id to use
 	userID := c.Request.Header.Get("id")
 
-	//
+	// declare instance of firestore
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
@@ -288,12 +289,11 @@ func GetPostByLikeIndividual(c *gin.Context) {
 	}
 
 	// get user data
-	userDoc, err := client.Collection("User").Doc(userID).Get(ctx)
+	userData, err := getUserData(client, userID)
 	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-
-	mapstructure.Decode(userDoc.Data(), &userData)
 
 	// Get the posts corresponding to the extracted post references
 	postDocs, err := client.GetAll(ctx, postRefs)
@@ -303,34 +303,22 @@ func GetPostByLikeIndividual(c *gin.Context) {
 		})
 		return
 	}
-	mapstructure.Decode(userDoc.Data(), &userData)
 
 	// loop data snap and decode data to post respone
 	for _, doc := range postDocs {
 
 		post := models.Post{}
-		postRes.Category = []string{}
 		mapstructure.Decode(doc.Data(), &post)
+		postResponse = convertPostToResponse(post, userID, userData, doc.Ref.ID)
+		postResponses = append(postResponses, postResponse)
 
-		// map data to seend to fronend
-		postRes.UserId = post.UserID.ID
-		postRes.PostId = doc.Ref.ID
-		postRes.Content = post.Content
-		postRes.Date = post.Date
-		postRes.IsPublic = post.IsPublic
-		postRes.CountLike = len(post.LikesRef)
-		postRes.CountComment = len(post.Comment)
-		postRes.Category = post.Category
-		postRes.IsLike = checkIsLikePost(post.LikesRef, userID)
-		postRes.IsBookmark = checkIsBookMark(doc.Ref.ID, userData.BookMark)
-		posts = append(posts, postRes)
 	}
 
 	// return json status code 200
-	c.JSON(http.StatusOK, posts)
+	c.JSON(http.StatusOK, postResponse)
 }
 
-// service create post
+// *service create post
 func CreatePost(c *gin.Context) {
 
 	// declare instance of firestore
@@ -349,8 +337,6 @@ func CreatePost(c *gin.Context) {
 		log.Fatalln(err)
 		return
 	}
-
-	// TODO: Maybe it's hsould to check post
 
 	// add object post to firestore DB
 	posRef, _, err := client.Collection("Post").Add(ctx, models.Post{
@@ -384,10 +370,11 @@ func CreatePost(c *gin.Context) {
 		CountComment: len(post.Comment),
 		CountLike:    len(post.LikesRef),
 		IsLike:       false,
+		IsBookmark:   false,
 	})
 }
 
-// service get my post
+// *service get my post
 func GetMyPost(c *gin.Context) {
 
 	// declare instance of firestore
@@ -398,10 +385,8 @@ func GetMyPost(c *gin.Context) {
 	userID := c.Request.Header.Get("id")
 
 	// declare all object variable
-	postRes := models.PostResponse{}
-	postsRes := []models.PostResponse{}
-	post := models.Post{}
-	userData := models.User{}
+	postResponse := models.PostResponse{}
+	postResponses := []models.PostResponse{}
 
 	// get all post by have a userID == userID
 	allPostdocSnap, err := client.Collection("Post").Where("UserID", "==", client.Collection("User").Doc(userID)).Documents(ctx).GetAll()
@@ -412,34 +397,25 @@ func GetMyPost(c *gin.Context) {
 	}
 
 	// get user data
-	userDoc, err := client.Collection("User").Doc(userID).Get(ctx)
+	userData, err := getUserData(client, userID)
 	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-	mapstructure.Decode(userDoc.Data(), &userData)
 
 	// convert data each post snap to post object
 	for _, postDoc := range allPostdocSnap {
+		post := models.Post{}
 		mapstructure.Decode(postDoc.Data(), &post)
-
-		postRes.UserId = post.UserID.ID
-		postRes.PostId = postDoc.Ref.ID
-		postRes.Content = post.Content
-		postRes.Date = post.Date
-		postRes.IsPublic = post.IsPublic
-		postRes.CountLike = len(post.LikesRef)
-		postRes.CountComment = len(post.Comment)
-		postRes.Category = post.Category
-		postRes.IsLike = checkIsLikePost(post.LikesRef, userID)
-		postRes.IsBookmark = checkIsBookMark(postDoc.Ref.ID, userData.BookMark)
-
-		postsRes = append(postsRes, postRes)
+		postResponse = convertPostToResponse(post, userID, userData, postDoc.Ref.ID)
+		postResponses = append(postResponses, postResponse)
 	}
 
 	// return data to frontend status 200
-	c.JSON(http.StatusOK, postsRes)
+	c.JSON(http.StatusOK, postResponses)
 }
 
+// *service delete my post
 func DeleteMyPost(c *gin.Context) {
 
 	// declare instance of firestore
@@ -480,6 +456,7 @@ func DeleteMyPost(c *gin.Context) {
 	})
 }
 
+// *service update my post
 func UpdatePost(c *gin.Context) {
 
 	// declare instance of firestore
@@ -490,104 +467,105 @@ func UpdatePost(c *gin.Context) {
 	postID := c.Param("post_id")
 	userID := c.Request.Header.Get("id")
 
-	// declare all object to use
-	post := models.Post{}
-	postUpdate := models.Post{}
+	// get post by id
+	postRef := client.Collection("Post").Doc(postID)
+	postDoc, err := postRef.Get(ctx)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found"})
+		return
+	}
 
-	// mapping data to object data
+	// update post with new data
+	var post models.Post
+	if err := postDoc.DataTo(&post); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found"})
+		return
+	}
+
+	var postUpdate models.Post
 	if err := c.BindJSON(&postUpdate); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found"})
 		return
 	}
 
-	// get post By id and update for update some field
-	postDoc, err := client.Collection("Post").Doc(postID).Get(ctx)
-	mapstructure.Decode(postDoc.Data(), &post)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found"})
+	post.Content = postUpdate.Content
+	post.IsPublic = postUpdate.IsPublic
+	post.Category = postUpdate.Category
+
+	if _, err := postRef.Set(ctx, post); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to update post"})
 		return
 	}
 
-	dataUopdate := models.Post{
-		UserID:   post.UserID,
-		Content:  postUpdate.Content,
-		Date:     post.Date,
-		IsPublic: postUpdate.IsPublic,
-		Category: postUpdate.Category,
-		Comment:  post.Comment,
-		LikesRef: post.LikesRef,
-	}
-	_, err = client.Collection("Post").Doc(postID).Set(ctx, dataUopdate)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found"})
-		return
-	}
-
-	// return data to frontend status 200
+	// return updated post to frontend
 	c.JSON(http.StatusOK, models.PostResponse{
-		UserId:       dataUopdate.UserID.ID,
+		UserId:       post.UserID.ID,
 		PostId:       postID,
-		Content:      dataUopdate.Content,
-		Date:         dataUopdate.Date,
-		IsPublic:     dataUopdate.IsPublic,
-		Category:     dataUopdate.Category,
-		CountComment: len(dataUopdate.Comment),
-		CountLike:    len(dataUopdate.LikesRef),
-		IsLike:       checkIsLikePost(dataUopdate.LikesRef, userID),
+		Content:      post.Content,
+		Date:         post.Date,
+		IsPublic:     post.IsPublic,
+		Category:     post.Category,
+		CountComment: len(post.Comment),
+		CountLike:    len(post.LikesRef),
+		IsLike:       checkIsLikePost(userID, post.LikesRef),
 	})
 }
 
-// service get my post
+// *Service to get posts by keyword
 func GetPostByKeyword(c *gin.Context) {
-	// create a context
+	// Get Firestore client and context
 	ctx := context.Background()
 	client := configs.CreateClient(ctx)
 
-	// userID := c.Request.Header.Get("id")
+	// Get keyword from URL parameter
 	keyword := c.Param("keyword")
 
-	// Find posts containing the keyword
+	// declare all object variable
+	postResponse := models.PostResponse{}
+	postResponses := []models.PostResponse{}
+
+	// Query posts containing the keyword
 	query := client.Collection("Post").Where("Content", ">=", keyword).Where("Content", "<=", keyword+"\uf8ff")
 
-	iter := query.Documents(ctx)
-	defer iter.Stop()
-
-	// Process query results and build response
-	postsRes := make([]models.PostResponse, 0, 10)
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
-			return
-		}
-		var post models.Post
-		err = doc.DataTo(&post)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
-			return
-		}
-		postRes := models.PostResponse{
-			PostId:       doc.Ref.ID,
-			UserId:       post.UserID.ID,
-			Content:      post.Content,
-			Category:     post.Category,
-			Date:         post.Date,
-			CountLike:    len(post.LikesRef),
-			CountComment: len(post.Comment),
-		}
-		postsRes = append(postsRes, postRes)
+	// Get post documents from the query
+	postDocs, err := query.Documents(ctx).GetAll()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+		return
 	}
 
-	// return the results
-	c.JSON(http.StatusOK, postsRes)
+	if len(postDocs) <= 0 {
+		c.JSON(http.StatusOK, postResponses)
+		return
+	}
 
-	// TODO: set to user data
+	// declare all id to use
+	userID := c.Request.Header.Get("id")
+
+	// get user data
+	userData, err := getUserData(client, userID)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	// Map post documents to PostResponse objects
+	for _, doc := range postDocs {
+		var post models.Post
+		if err := doc.DataTo(&post); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+			return
+		}
+
+		postResponse = convertPostToResponse(post, userID, userData, doc.Ref.ID)
+		postResponses = append(postResponses, postResponse)
+	}
+
+	// Return the PostResponse objects
+	c.JSON(http.StatusOK, postResponses)
 }
 
-// get by by cateegory
+// *get by by cateegory
 func GetPostByCategorry(c *gin.Context) {
 
 	// create a context
@@ -597,15 +575,23 @@ func GetPostByCategorry(c *gin.Context) {
 	// declare all id to use
 	userID := c.Request.Header.Get("id")
 
-	// declare object to usee
+	// declare all object variable
+	postResponse := models.PostResponse{}
+	postResponses := []models.PostResponse{}
+
 	category := c.Param("category")
-	postsRes := []models.PostResponse{}
-	postRes := models.PostResponse{}
 
 	//geet all post by category
-	postsDoc, err := client.Collection("Post").Where("Category", "array_contains", category).Documents(ctx).GetAll()
+	postsDoc, err := client.Collection("Post").Where("Category", "array-contains", category).Documents(ctx).GetAll()
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "cant to get all post by cateegory"})
+		return
+	}
+
+	// get user data
+	userData, err := getUserData(client, userID)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
@@ -613,24 +599,11 @@ func GetPostByCategorry(c *gin.Context) {
 	for _, doc := range postsDoc {
 
 		post := models.Post{}
-		postRes.Category = []string{}
 		mapstructure.Decode(doc.Data(), &post)
-
-		// map data to seend to fronend
-		postRes.UserId = post.UserID.ID
-		postRes.PostId = doc.Ref.ID
-		postRes.Content = post.Content
-		postRes.Date = post.Date
-		postRes.IsPublic = post.IsPublic
-		postRes.CountLike = len(post.LikesRef)
-		postRes.CountComment = len(post.Comment)
-		postRes.Category = post.Category
-		postRes.IsLike = checkIsLikePost(post.LikesRef, userID)
-
-		postsRes = append(postsRes, postRes)
+		postResponse = convertPostToResponse(post, userID, userData, doc.Ref.ID)
+		postResponses = append(postResponses, postResponse)
 	}
 
 	// return json status code 200
-	c.JSON(http.StatusOK, postsRes)
-
+	c.JSON(http.StatusOK, postResponses)
 }

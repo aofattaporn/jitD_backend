@@ -13,7 +13,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// LikePost creates a user like on a post
+// *LikePost creates a user like on a post
 func LikePost(c *gin.Context) {
 
 	// declare instance of fiirestore
@@ -25,7 +25,6 @@ func LikePost(c *gin.Context) {
 	postID := c.Param("post_id")
 
 	// declare object to use in this function
-	var post models.Post
 
 	// crete like object for save to db
 	like := models.Like{
@@ -41,7 +40,6 @@ func LikePost(c *gin.Context) {
 		})
 		return
 	}
-
 	if len(likeExis) > 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "you already like this post",
@@ -59,21 +57,12 @@ func LikePost(c *gin.Context) {
 		}
 
 		// get post data by post id to map
-		postRef := client.Collection("Post").Doc(postID)
-		postSnap, err := tx.Get(postRef)
-		if err != nil {
-			return err
-		}
-
-		// map data to post
-		err = postSnap.DataTo(&post)
-		if err != nil {
-			return err
-		}
-
-		// append to post like ref and set to DDB
-		post.LikesRef = append(post.LikesRef, &like)
-		err = tx.Set(postRef, post)
+		err = tx.Update(client.Collection("Post").Doc(postID), []firestore.Update{
+			{
+				Path:  "LikesRef",
+				Value: firestore.ArrayUnion(client.Collection("Post").Doc(postID)),
+			},
+		})
 		if err != nil {
 			return err
 		}
@@ -94,7 +83,7 @@ func LikePost(c *gin.Context) {
 	})
 }
 
-// UnlikePost removes a user like from a post
+// *UnlikePost removes a user like from a post
 func UnlikePost(c *gin.Context) {
 
 	// declare instance of fiirestore
@@ -159,15 +148,13 @@ func UnlikePost(c *gin.Context) {
 				}
 			}
 
-			// remove lke from post data
-			for i, like := range post.LikesRef {
-				if like.UserRef.ID == userID && like.PostRef.ID == postID {
-					post.LikesRef = append(post.LikesRef[:i], post.LikesRef[i+1:]...)
-					break
-				}
-			}
-
-			err = tx.Set(postRef, post)
+			// get post data by post id to map
+			err = tx.Update(client.Collection("Post").Doc(postID), []firestore.Update{
+				{
+					Path:  "LikesRef",
+					Value: firestore.ArrayRemove(client.Collection("Post").Doc(postID)),
+				},
+			})
 			if err != nil {
 				return err
 			}
@@ -331,6 +318,7 @@ func UnLikeComment(c *gin.Context) {
 	})
 }
 
+// * service get pupular category
 func GetCatPopular(c *gin.Context) {
 
 	// create instance for use instance
