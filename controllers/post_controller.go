@@ -181,12 +181,6 @@ func GetAllPostHomePage(c *gin.Context) {
 
 	postRes = models.PostResponse{}
 
-	fmt.Println(postLikeDocs)
-
-	for _, v := range postLikeDocs {
-		fmt.Println(v.Ref.ID)
-	}
-
 	for _, doc := range postLikeDocs {
 
 		post := models.Post{}
@@ -355,9 +349,18 @@ func CreatePost(c *gin.Context) {
 		})
 		return
 	}
+	// get user data
+	userData, err := getUserData(client, userID)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
 
 	// TODO: update progress dialy quest
 	UpdateProgressQuest(c, "PostQuest")
+
+	// TODO: update post category
+	saveCountCategory(client, post.Category, userID, userData.CategoryID, ctx)
 
 	// return data to frontend status 200
 	c.JSON(http.StatusOK, models.PostResponse{

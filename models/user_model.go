@@ -8,6 +8,7 @@ import (
 
 type User struct {
 	UserID       string                   `json:"userID"`
+	CategoryID   string                   `json:"categoryID"`
 	PetName      string                   `json:"petName"`
 	PetHP        int                      `json:"petHP"`
 	Point        int                      `json:"point"`
