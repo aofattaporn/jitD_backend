@@ -315,7 +315,6 @@ func GetPostByLikeIndividual(c *gin.Context) {
 	}
 
 	for _, v := range postResponsesNew {
-		fmt.Println(v)
 		postResponses = append(postResponses, v)
 	}
 
