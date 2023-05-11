@@ -120,7 +120,7 @@ func GetAllPostHomePage(c *gin.Context) {
 	mapstructure.Decode(userDoc.Data(), &userData)
 
 	// get data homepage case1 - orderbydate
-	postDateDoc, err := client.Collection("Post").Limit(10).OrderBy("Date", firestore.Asc).Documents(ctx).GetAll()
+	postDateDoc, err := client.Collection("Post").Limit(10).OrderBy("Date", firestore.Desc).Documents(ctx).GetAll()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Failed to get liked posts",
@@ -310,6 +310,9 @@ func GetPostByLikeIndividual(c *gin.Context) {
 		post := models.Post{}
 		mapstructure.Decode(doc.Data(), &post)
 		postResponse = convertPostToResponse(post, userID, userData, doc.Ref.ID)
+		if postResponse.Category == nil {
+			continue
+		}
 		postResponses = append(postResponses, postResponse)
 
 	}
