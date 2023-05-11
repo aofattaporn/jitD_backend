@@ -16,7 +16,6 @@ func PostRoutes(route *gin.Engine) {
 	v1.GET("/byReccommend", controllers.RecommendPost)
 	v1.GET("/keyword/:keyword", controllers.GetPostByKeyword)
 	v1.GET("/category/:category", controllers.GetPostByCategorry)
-
 	v1.POST("/", controllers.CreatePost)
 	v1.DELETE("/:post_id", controllers.DeleteMyPost)
 	v1.PUT("/:post_id", controllers.UpdatePost)

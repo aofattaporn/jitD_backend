@@ -297,6 +297,12 @@ func GetPostByLikeIndividual(c *gin.Context) {
 		})
 		return
 	}
+	// Get all posts
+	postResponsesNew, err := getAllPosts(client, userID, userData)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
 
 	// loop data snap and decode data to post respone
 	for _, doc := range postDocs {
@@ -308,8 +314,13 @@ func GetPostByLikeIndividual(c *gin.Context) {
 
 	}
 
+	for _, v := range postResponsesNew {
+		fmt.Println(v)
+		postResponses = append(postResponses, v)
+	}
+
 	// return json status code 200
-	c.JSON(http.StatusOK, postResponse)
+	c.JSON(http.StatusOK, postResponses)
 }
 
 // *service create post
