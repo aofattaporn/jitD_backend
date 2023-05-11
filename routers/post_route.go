@@ -13,6 +13,7 @@ func PostRoutes(route *gin.Engine) {
 	v1.GET("/homepage", controllers.GetAllPostHomePage)
 	v1.GET("/id", controllers.GetMyPost)
 	v1.GET("/byLike", controllers.GetPostByLikeIndividual)
+	v1.GET("/byReccommend", controllers.RecommendPost)
 	v1.GET("/keyword/:keyword", controllers.GetPostByKeyword)
 	v1.GET("/category/:category", controllers.GetPostByCategorry)
 

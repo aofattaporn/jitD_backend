@@ -21,9 +21,28 @@ func CreateUser(c *gin.Context) {
 	client := configs.CreateClient(ctx)
 	userID := c.Request.Header.Get("id")
 
+	// Create the document if it doesn't exist
+	// catRef, _, err := client.Collection("CategoryReccommend").Add(ctx, models.CategoryReccommend{
+	// 	UserID:              client.Collection("User").Doc(userID),
+	// 	Date:                time.Now().UTC(),
+	// 	CountStudy:          0,
+	// 	CountWork:           0,
+	// 	CountMentalHealth:   0,
+	// 	CountLifeProblem:    0,
+	// 	CountRelationship:   0,
+	// 	CountFamily:         0,
+	// 	CountPhysicalHealth: 0,
+	// })
+	// if err != nil {
+	// 	// Handle error
+	// 	fmt.Println("Failed to create document:", err)
+	// 	return
+	// }
+
 	// create user document
 	user := models.User{
-		UserID:       userID,
+		UserID: userID,
+		// CategoryID:   catRef.ID,
 		PetName:      "my bear",
 		PetHP:        100,
 		Point:        0,
@@ -76,6 +95,7 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
+	// TODO: create a CategoryReccommend
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "create a user succsess fully",
 	})

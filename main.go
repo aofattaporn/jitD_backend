@@ -2,7 +2,6 @@ package main
 
 import (
 	configs "jitD/configs"
-	"jitD/controllers"
 	routes "jitD/routers"
 
 	"github.com/gin-gonic/gin"
@@ -33,7 +32,7 @@ func main() {
 	// initail route
 	router := gin.Default()
 
-	controllers.ReccomendPost()
+	// controllers.ReccomendPost()
 	// use middleware
 	router.Use(CORSMiddleware())
 	router.Use(configs.Verify)
@@ -46,7 +45,6 @@ func main() {
 	routes.BookMarkRoutes(router)
 	routes.TestRoute(router)
 	// routes.ReportRoutes(router)
-
 	routes.MockingRoute(router)
 
 	// configue on port 3000

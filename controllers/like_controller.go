@@ -60,7 +60,7 @@ func LikePost(c *gin.Context) {
 		err = tx.Update(client.Collection("Post").Doc(postID), []firestore.Update{
 			{
 				Path:  "LikesRef",
-				Value: firestore.ArrayUnion(client.Collection("Post").Doc(postID)),
+				Value: firestore.ArrayUnion(like),
 			},
 		})
 		if err != nil {
@@ -100,6 +100,13 @@ func UnlikePost(c *gin.Context) {
 	// get referenc of postID and userID
 	userRef := client.Collection("User").Doc(userID)
 	postRef := client.Collection("Post").Doc(postID)
+
+	// // crete like object for save to db
+	// like := models.Like{
+	// 	UserRef: userRef,
+	// 	PostRef: postRef,
+	// 	Date:    time.Now().UTC(),
+	// }
 
 	// get post data from post ref and map to post
 	postDocsnap, errPost := postRef.Get(ctx)
@@ -148,16 +155,17 @@ func UnlikePost(c *gin.Context) {
 				}
 			}
 
-			// get post data by post id to map
-			err = tx.Update(client.Collection("Post").Doc(postID), []firestore.Update{
-				{
-					Path:  "LikesRef",
-					Value: firestore.ArrayRemove(client.Collection("Post").Doc(postID)),
-				},
-			})
-			if err != nil {
-				return err
+			// remove all like from like collection
+			// remove lke from post data
+			for i, like := range post.LikesRef {
+				if like.UserRef.ID == userID && like.PostRef.ID == postID {
+					post.LikesRef = append(post.LikesRef[:i], post.LikesRef[i+1:]...)
+					break
+				}
 			}
+
+			err = tx.Set(postRef, post)
+
 		}
 
 		return nil
